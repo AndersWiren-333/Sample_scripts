@@ -1,0 +1,2 @@
+The scripts and modules in this repository are currently not licensed (i.e. the authors retain
+all rights), but they may be in the future.
