@@ -28,10 +28,11 @@ use diagnostics;
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
 # in common with this repository.
-my $scripts = cwd;
-chdir("../modules");
-my $modules = cwd;
-chdir("../scripts");
+my $thisfile = (__FILE__);
+my $modules = "";
+if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
+my $scripts = $modules;
+$scripts =~ s/modules/scripts/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
