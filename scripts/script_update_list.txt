@@ -20,7 +20,6 @@ generate_random_reads_1.0.pl
 get_exon_distances_from_gff_1.0.pl
 get_fasta_for_novel_1.0.pl
 get_gene_distances_from_gff_1.0.pl
-get_info_from_gff_1.3.pl
 get_presence_plot_data_1.1.pl
 get_unblasted_ids_above_ofc2_1.0.pl
 length_corr_2.0.pl
