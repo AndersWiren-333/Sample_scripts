@@ -16,6 +16,7 @@ use Bio::SeqIO;
 use Cwd;
 use threads;
 use diagnostics;
+use FindBin;
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
