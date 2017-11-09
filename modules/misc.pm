@@ -22,8 +22,11 @@ use File::Copy;
 use Bio::SeqIO;
 use Cwd;
 use threads;
-use diagnostics;
+#use diagnostics;
 use FindBin;
+use DBI;
+use IO::Compress::Gzip qw(gzip);
+use IO::Uncompress::Gunzip qw(gunzip);
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
@@ -53,8 +56,9 @@ require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
 
-# Get environment information
-my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
+# Create a timestamp string (can be attached to the name of logfiles, for example
+my $timestamp = envir::timestamp();
+my $rscript = "Rscript";
 
 # end header
 
@@ -726,7 +730,7 @@ sub check_compressed
 			{
 			$filename_gz = $file;	# Set compressed name
 			$filename = $basename;	# Set uncompressed name
-			system("$uncompress $filename_gz");	# Uncompress
+			gunzip "$filename_gz" => "$filename"; unlink($filename_gz);		# Uncompress
 			}
 
 		# If it doesn't, check if there is an uncompressed file with the same basename
@@ -753,7 +757,7 @@ sub check_compressed
 		unless(-e $infile)
 			{
 			# If there is such a file, uncompress it
-			if(-e $filename_gz)	{	system("$uncompress $filename_gz");	}
+			if(-e $filename_gz)	{	gunzip "$filename_gz" => "$filename"; unlink($filename_gz);	}
 			}
 
 		}

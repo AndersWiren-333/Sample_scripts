@@ -22,8 +22,11 @@ use File::Copy;
 use Bio::SeqIO;
 use Cwd;
 use threads;
-use diagnostics;
+#use diagnostics;
 use FindBin;
+use DBI;
+use IO::Compress::Gzip qw(gzip);
+use IO::Uncompress::Gunzip qw(gunzip);
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
@@ -53,8 +56,9 @@ require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
 
-# Get environment information
-my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
+# Create a timestamp string (can be attached to the name of logfiles, for example
+my $timestamp = envir::timestamp();
+my $rscript = "Rscript";
 
 # end header
 
@@ -265,9 +269,9 @@ sub concat_PE
 	my @new_names=();
 
 	for(my $c=0; $c<$num_pairs; $c++)
-        	{
-        	my $infile1=shift(@filenames);
-        	my $infile2=shift(@filenames);
+		{
+		my $infile1=shift(@filenames);
+		my $infile2=shift(@filenames);
 	
 		my ($file1_gz, $file1)=misc::check_compressed($infile1);
 		my ($file2_gz, $file2)=misc::check_compressed($infile2);
@@ -278,10 +282,24 @@ sub concat_PE
 		push(@new_names, $newname);
 
 		if($remove_infiles eq "y")	{	unlink($file1, $file2);	}
-		if(($remove_infiles eq "n") and ($zip eq "in"))	{	system("$compress $file1 $file2");	}
-		elsif(($remove_infiles eq "n") and ($zip eq "both"))   {       system("$compress $file1 $file2 $newname");     }
-		if($zip eq "out")	{	system("$compress $newname");	}
-        	}	
+		
+		
+		if(($remove_infiles eq "n") and ($zip eq "in"))
+			{	
+			gzip "$file1" => "${file1}.gz"; unlink($file1);
+			gzip "$file2" => "${file2}.gz"; unlink($file2);
+			}
+		elsif(($remove_infiles eq "n") and ($zip eq "both"))
+			{
+			gzip "$file1" => "${file1}.gz"; unlink($file1);
+			gzip "$file2" => "${file2}.gz"; unlink($file2);
+			gzip "$newname" => "${newname}.gz"; unlink($newname);
+			}
+		if($zip eq "out")
+			{	
+			gzip "$newname" => "${newname}.gz"; unlink($newname);
+			}
+        }	
 
         return(@new_names);
 	}

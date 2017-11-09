@@ -23,8 +23,11 @@ use File::Copy;
 use Bio::SeqIO;
 use Cwd;
 use threads;
-use diagnostics;
+#use diagnostics;
 use FindBin;
+use DBI;
+use IO::Compress::Gzip qw(gzip);
+use IO::Uncompress::Gunzip qw(gunzip);
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
@@ -54,8 +57,9 @@ require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
 
-# Get environment information
-my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
+# Create a timestamp string (can be attached to the name of logfiles, for example
+my $timestamp = envir::timestamp();
+my $rscript = "Rscript";
 
 # end header
 
@@ -618,13 +622,17 @@ sub remove_alignment_target_from_fasta
 
 	unlink($patfile);
 
-	if($zip eq "in")	{	system("$compress $infile");	}
-	elsif($zip eq "out")	{	system("$compress $outname");	}
-	elsif($zip eq "all")	{	system("$compress $infile $outname");	}
+	if($zip eq "in")	{	gzip "$infile" => "${infile}.gz"; unlink($infile);	}
+	elsif($zip eq "out")	{	gzip "$infile" => "${infile}.gz"; unlink($infile);	}
+	elsif($zip eq "all")
+		{
+		gzip "$infile" => "${infile}.gz"; unlink($infile);
+		gzip "$infile" => "${infile}.gz"; unlink($infile);
+		}
 
 	close($out);
-        #return($something);
-        }
+	#return($something);
+	}
 
 return(1);
 

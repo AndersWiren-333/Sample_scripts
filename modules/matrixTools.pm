@@ -21,8 +21,11 @@ use File::Copy;
 use Bio::SeqIO;
 use Cwd;
 use threads;
-use diagnostics;
+#use diagnostics;
 use FindBin;
+use DBI;
+use IO::Compress::Gzip qw(gzip);
+use IO::Uncompress::Gunzip qw(gunzip);
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
@@ -52,8 +55,9 @@ require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
 
-# Get environment information
-my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
+# Create a timestamp string (can be attached to the name of logfiles, for example
+my $timestamp = envir::timestamp();
+my $rscript = "Rscript";
 
 # end header
 
@@ -61,7 +65,7 @@ my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
 
 # Prints a given matrix on screen
 sub testprint_matrix
-        {
+	{
 	my $usage = "Syntax error for sub testprint_matrix. Correct usage: 'matrixTools::testprint_matrix(\@matrix)'\n";
         my $matrix_ref = $_[0] or die $usage;
         my @matrix = @{$matrix_ref};
@@ -76,9 +80,9 @@ sub testprint_matrix
 			print("$matrix[$c][$d]\t");
 			}
 
-                print("\n");
-                }
-        }
+		print("\n");
+		}
+	}
 
 # Transposes a given matrix (converts rows to columns and columns to rows)
 sub transpose_matrix

@@ -1,6 +1,6 @@
 package envir;
 
-# sub senseEnv()
+# sub timestamp()
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -13,8 +13,11 @@ use File::Copy;
 use Bio::SeqIO;
 use Cwd;
 use threads;
-use diagnostics;
+#use diagnostics;
 use FindBin;
+use DBI;
+use IO::Compress::Gzip qw(gzip);
+use IO::Uncompress::Gunzip qw(gunzip);
 
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
@@ -44,35 +47,16 @@ require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
 
-# Get environment information
-my ($timestamp, $r, $rscript, $compress, $uncompress) = envir::senseEnv();
+# Create a timestamp string (can be attached to the name of logfiles, for example
+my $timestamp = envir::timestamp();
+my $rscript = "Rscript";
 
 # end header
 
 ########################################################## Functions ##########################################################
 
-sub senseEnv
+sub timestamp
         {
-        # Check which operating system and computer you are on and set the path to R and perl modules accordingly
-        my $os = $^O;
-        my $computer = hostname;
-        my $r = "r";
-        my $rscript = "Rscript";
-
-        # Set operating system dependent commands
-        my $compress="";
-        my $uncompress="";
-        if(($os eq "linux") or ($os eq "darwin"))
-                {
-                $compress = "gzip";
-                $uncompress = "gunzip";
-                }
-        elsif($os eq "windows")
-                {
-                $compress = "compact /c";
-                $uncompress = "compact /u";
-                }
-
 		# Create a timestamp
 		my ($sec,$min,$hour,$mday,$month,$year,$wday,$yday,$isdst) = localtime(time);
 		$year=$year+1900;
@@ -81,9 +65,7 @@ sub senseEnv
 		if($mday<10)   {       $mday = "0"."$mday";  }
 		my $timestamp = "$year"."-"."$month"."-"."$mday"."_"."$hour"."-"."$min"."-"."$sec";
 
-		# Gather variables in array
-		my @env_var = ($timestamp, $r, $rscript, $compress, $uncompress);
-		return(@env_var);
+		return($timestamp);
         }
 	
 return(1);
