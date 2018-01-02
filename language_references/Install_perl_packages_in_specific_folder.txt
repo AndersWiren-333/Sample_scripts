@@ -1,0 +1,4 @@
+cpan> o conf mbuildpl_arg "--install_base /proj/rose/"
+cpan> o conf makepl_arg "PREFIX=/proj/rose/"
+cpan> install HTML::Template
+o conf init

@@ -1,0 +1,91 @@
+---
+title: "Reference markdown document"
+author: "Anders"
+date: "13 november 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Inledning
+
+Detta är mitt *allra* **första** markdown-dokument.Jag är
+
+1. Så stolt
+2. Så duktig
+    + på R
+    + på Perl
+  
+3. Glad att jag ska till Linköping
+
+
+```{r addition, echo=FALSE}
+num <- 2+3
+print(num)
+```
+
+Alla goda ting är `r 2+1`, så det så!
+
+Här är en länk till Sveriges Radio: http://sr.se
+
+Och här är en till [Dagens Nyheter](http://www.dn.se)
+
+Här är en cool munk på en bergstopp:
+![Cool munk](https://cdn.eventfinda.co.nz/uploads/events/transformed/620617-292833-14.jpg)
+
+Här är en ännu coolare munk på en bergstopp, från min hårddisk. Inre frid!
+![Inre frid](C:\Users\Anders\Documents\02_Privat\Bilder\07_Bakgrunder\Shaolin\Shaolin_03.bmp)
+
+Som sagt,
+
+> You must be one of the Dunedain,
+> blessed with long life.
+
+
+```
+This is code
+```
+
+This is `inline` code
+
+****
+New page!
+
+Here is a table:
+
+Column 1 | Column 2
+---------|--------
+Adrian| Aronsson
+Barbro | Birgersdotter
+Cecilia | Ceasar
+
+
+
+Det [här][1] är en länk som definieras längre ner på sidan men som går att använda härifrån.
+
+Och här är ännu en bild:
+
+![Bild][2]
+
+
+Man får en radbrytning  
+genom att skriva två blanksteg (efter "radbrytning" alltså)
+
+Min lägenhet är en etta på 41 m^2^
+
+~~Den här raden har jag strukit~~
+
+$\alpha = \dfrac{1}{(1 - \beta)^2}$
+
+$\gamma = \alpha^2 + \beta^2$
+
+```{r echo=FALSE}
+print('More code')
+```
+
+
+
+[1]: https://www.youtube.com/watch?v=x8cvLMhnnEU "Sombre Foret"
+[2]: C:\Users\Anders\Documents\02_Privat\Bilder\07_Bakgrunder\Shaolin\Shaolin_06.bmp "Två munkar"
