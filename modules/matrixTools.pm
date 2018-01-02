@@ -6,12 +6,21 @@ package matrixTools;
 # sub create_zero_matrix($num_rows, $num_cols)
 # sub merge_matrices_col(\@matrix1)
 # sub split_matrix_on_col_value(\@matrix, $col_index)
-# sub get_matrix_column($matrixref, $col_index1, $col_index2...)
+# sub get_matrix_columns_as_rows($matrixref, $col_index1, $col_index2...)
 # sub delete_matrix_columns($matrixref, $col_index1, $col_index2...)
 # sub add_length_to_matrix_gene_id($matrixref, $length_col_index, $header_y_n)
+# sub add_cols_to_matrix($matrixref, $col1_ref, $col2_ref etc...)
+# sub sync_genelists_on_sortkey($matrix1.csv, $sortkey1, $matrix2.csv, $sortkey2)
+# sub apply($matrixref, $row_or_col, $function)
+# sub dim($matrix_reference)
+# sub replace_matrix_cols(\@matrix, \@replacement_cols_matrix, $col_to_replace1, $col_to_replace2 etc...)
+# sub get_matrix_columns($matrix_reference, $col1, $col2 etc...)
+# sub matrix_equality($matrixref1, $matrixref2)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
+
+# perl_module_update
 
 # Load libraries that this module depends on
 use warnings;
@@ -35,6 +44,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -54,6 +65,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -66,68 +79,74 @@ my $rscript = "Rscript";
 # Prints a given matrix on screen
 sub testprint_matrix
 	{
-	my $usage = "Syntax error for sub testprint_matrix. Correct usage: 'matrixTools::testprint_matrix(\@matrix)'\n";
-        my $matrix_ref = $_[0] or die $usage;
-        my @matrix = @{$matrix_ref};
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref)'\n\nwhere".
+	"\t\$matrixref is a reference to the matrix to be printed\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	
+	# Process matrix
+	my @matrix = @{$matrixref};
 
-        # Loop over rows in matrix
-        for(my $c=0; $c<=$#matrix; $c++)
-                {
-                my @arr=@{$matrix[$c]};
-		my $last_col = scalar(@arr);		
-		for(my $d=0; $d<$last_col; $d++)
-			{
-			print("$matrix[$c][$d]\t");
-			}
-
+	# Loop over rows in matrix
+	for(my $c=0; $c<=$#matrix; $c++)
+		{
+		my @arr=@{$matrix[$c]};
+				
+		# Loop over columns in row
+		for(my $d=0; $d<=$#arr; $d++)	{	print("$arr[$d]\t");	}
 		print("\n");
 		}
 	}
 
 # Transposes a given matrix (converts rows to columns and columns to rows)
 sub transpose_matrix
-        {
+	{
 	my $usage = "Syntax error for sub transpose_matrix. Correct usage: 'matrixTools::transpose_matrix(\@matrix)'\n";
-        my $matrix_ref = $_[0] or die $usage;
-        my @matrix = @{$matrix_ref};
-        my $num_rows=scalar(@matrix);
-        my @first_row=@{$matrix[0]};
-        my $num_cols=scalar(@first_row);
+	my $matrix_ref = $_[0] or die $usage;
+	my @matrix = @{$matrix_ref};
+	my $num_rows=scalar(@matrix);
+	my @first_row=@{$matrix[0]};
+	my $num_cols=scalar(@first_row);
 
-        my @t_matrix=();
+	my @t_matrix=();
 
-        # Loop over columns in original matrix
-        for(my $cc=0; $cc<$num_cols; $cc++)
-                {
-                # Loop over rows in riginal matrix
-                for(my $dd=0; $dd<$num_rows; $dd++)
-                        {
-                        $t_matrix[$cc][$dd] = $matrix[$dd][$cc];
-                        }
-                }
-        return(@t_matrix);
-        }
+	# Loop over columns in original matrix
+	for(my $cc=0; $cc<$num_cols; $cc++)
+		{
+		# Loop over rows in riginal matrix
+		for(my $dd=0; $dd<$num_rows; $dd++)
+			{
+			$t_matrix[$cc][$dd] = $matrix[$dd][$cc];
+			}
+		}
+	return(@t_matrix);
+	}
 
 # Generates a matrix with given dimensions, filled with random numbers between given values and with a given number of decimals
 sub generate_rand_matrix
-        {
+	{
 	my $usage = "Syntax error for sub generate_rand_matrix. Correct usage: 'matrixTools::generate_rand_matrix(\$rows, \$columns, \$min, \$max, \$decimals);'\n";
-        my $rows = $_[0] or die $usage;
-        my $cols = $_[1] or die $usage;
-        my $min = $_[2] or die $usage;
-        my $max = $_[3] or die $usage;
-        my $dec = $_[4] or 0;
-        my @matrix=();
+	my $rows = $_[0] or die $usage;
+	my $cols = $_[1] or die $usage;
+	my $min = $_[2] or die $usage;
+	my $max = $_[3] or die $usage;
+	my $dec = $_[4] or 0;
+	my @matrix=();
 
-        for(my $cc=0; $cc<$rows; $cc++)
-                {
-                for(my $dd=0; $dd<$cols; $dd++)
-                        {
-                        $matrix[$cc][$dd] = stats::rand_between($min, $max, $dec);
-                        }
-                }
-        return(@matrix);
-        }
+	for(my $cc=0; $cc<$rows; $cc++)
+		{
+		for(my $dd=0; $dd<$cols; $dd++)
+			{
+			$matrix[$cc][$dd] = stats::rand_between($min, $max, $dec);
+			}
+		}
+	return(@matrix);
+	}
 
 # Creates a matrix with the specified numbers of rows and columns, filled with zeros
 sub create_zero_matrix
@@ -337,29 +356,24 @@ sub testprint_3d_matrix
 
 # Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those columns in the matrix. If one column is requested,
 # the function returns it as an array. If more columns are requested, they are returned as a matrix where each row is a reference to an array holding
-# a specific column. NB! The first column in a matrix has to be specified as "n" rather than "0", since Perl can't accept "0" as a command line argument.
-sub get_matrix_columns
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
-        "\t\$matrixref is a refernce to the matrix from which columns should be retrieved\n".
-        "\t\$col_index1 is the index of the first column to be retrieved\n".
-	"\t\$col_index2 is the index of the second column to be retrieved, etc.\n".
-	"\n".
-	"\tNB! The first column in a matrix has to be specified as 'n' rather than '0', since Perl can't accept '0' as a command line argument.\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
-        my @cols = @pars or die $usage;
+# a specific column. The first column is called 1, the second 2 etc (i.e. not standard perl indexing).
+sub get_matrix_columns_as_rows
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
+	"\t\$matrixref is a refernce to the matrix from which columns should be retrieved\n".
+	"\t\$col_index1 is the index of the first column to be retrieved. NB! The first column is called '1' rather than '0'.\n".
+	"\t\$col_index2 is the index of the second column to be retrieved, etc.\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;
+	my @cols = @pars or die $usage;
+	@cols=misc::shift_input_cols(\@cols);
+
+	# Processing
 	my $num_cols = scalar(@cols);
 	my @matrix = @{$matrixref};
-
-	# If @cols contains "n" (the represenation of zero), replace it with 0.
-	foreach my $el (@cols)
-		{
-		if($el eq "n")	{	$el = 0;	}
-		}
 
 	# Get the columns
 	my @one=();
@@ -380,31 +394,25 @@ sub get_matrix_columns
 
 	if($num_cols>1)	{	return(@all);	}
 	elsif($num_cols==1) {       return(@one);   }
-        }
+	}
 
-# Deletes specified columns from a matrix. NB! The first column in a matrix has to be specified as "n" rather than "0", since Perl can't accept "0" as a command line argument.
+# Deletes specified columns from a matrix. NB! The first column in a matrix is called 1 rather than 0 (i.e. not perl native indexing).
 sub delete_matrix_columns
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
-        "\t\$matrixref is a reference to the matrix from which columns should be deleted\n".
-        "\t\$col_index1 is the index of the first column to be deleted\n".
-        "\t\$col_index2 is the index of the second column to be deleted, etc.\n".
-        "\n".
-        "\tNB! The first column in a matrix has to be specified as 'n' rather than '0', since Perl can't accept '0' as a command line argument.\n\n";
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
+	"\t\$matrixref is a reference to the matrix from which columns should be deleted\n".
+	"\t\$col_index1 is the index of the first column to be deleted. NB! The first column in a matrix is called 1 rather than 0.\n".
+	"\t\$col_index2 is the index of the second column to be deleted, etc.\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
-        my @exclude_col_indices = @pars or die $usage;
-        my @matrix = @{$matrixref};
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @exclude_col_indices = @pars or die $usage;
+	my @matrix = @{$matrixref};
 	
-        # If @exclude_col_indices contains "n" (the represenation of zero), replace it with 0.
-        foreach my $el (@exclude_col_indices)
-                {
-                if($el eq "n")  {       $el=0;       }
-                }
+	@exclude_col_indices=misc::shift_input_cols(\@exclude_col_indices);
 
 	my @new_matrix=();
 
@@ -430,16 +438,16 @@ sub delete_matrix_columns
 
 # Takes a gene expression with a gene length column and adds the length information to the ID/name column of every gene, e.g. "Etteplan_B" becomes "Etteplan_B_1_237"
 sub add_length_to_matrix_gene_id
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$length_col_index, \$header_y_n)'\n\nwhere".
-        "\t\$matrixref is a reference to the matrix to be processed\n".
-        "\t\$length_col_index is the column number (minus one) of the column holding the length information. If this is 0, set it to 'n' (Perl can't handle zero as a command line argument)\n".
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$length_col_index, \$header_y_n)'\n\nwhere".
+	"\t\$matrixref is a reference to the matrix to be processed\n".
+	"\t\$length_col_index is the column number (minus one) of the column holding the length information. If this is 0, set it to 'n' (Perl can't handle zero as a command line argument)\n".
 	"\t\$header_y_n is an indicator of whether the matrix has a header or not. 'y' is yes and 'n' is no\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $col_ind = shift @pars or die $usage;
 	my $header_y_n = shift @pars or die $usage;
 
@@ -457,9 +465,296 @@ sub add_length_to_matrix_gene_id
 		$matrix[$cc][0] = $new_id;
 		}
 
-        return(@matrix);
-        }
+	return(@matrix);
+	}
 
+# Adds one or more columns to a matrix. The new columns are specified as array references.
+sub add_cols_to_matrix
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$colref_1, \$colref_2 etc...)'\n\nwhere".
+	"\t\$matrixref is a reference to the matrix that columns should be added to\n".
+	"\t\$colref_1 is a reference to a column containing the values that should become the first new column\n".
+	"\t\$colref_2 is a reference to a column containing the values that should become the secons new column\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	my @columns = @pars or die $usage;
+
+	my @matrix = @{$matrixref};
+	
+	# If the matrix is empty this function will not work, so we have to create a dummy row to start with
+	my @first_row = (1,2,3);
+	my @second_row = (4,5,6);
+	my $empty="n";
+	if(scalar(@matrix)==0)	{	$matrix[0] = (\@first_row);	$matrix[1] = (\@second_row); $empty="y";	}
+	
+	# Transpose matrix
+	my @t_matrix=matrixTools::transpose_matrix(\@matrix);
+	
+	# Add new columns (as rows, since the matrix is now transposed)
+	foreach my $el (@columns)	{	push(@t_matrix, $el);	}
+	
+	# If the input matrix was empty, remove the now three (before transposition two) dummy rows we added earlier to get something to add columns to
+	if($empty eq "y")	{	shift(@t_matrix); shift(@t_matrix); shift(@t_matrix);	}
+	
+	# Transpose back
+	my @new_matrix=matrixTools::transpose_matrix(\@t_matrix);
+		
+	return(@new_matrix);	
+	}
+
+# Takes two genelists and removes any genes that are only present in one of them, i.e. it retains those genes that are common to the two lists
+# (i.e. it produces the intersection of the lists, but doesn’t join them – it outputs two new lists). For this to be possible, the lists need
+# to use the same type of gene identifiers, and the column number of these identifiers are given as arguments at the command line.
+sub sync_genelists_on_sortkey
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix1.csv, \$sortkey1, \$matrix2.csv, \$sortkey2)'\n\nwhere".
+	"\t\$matrix1.csv is the first genelist\n".
+	"\t\$sortkey1 is the column number in the first genelist where the common identifiers are stored\n".
+	"\t\tNB! NB! If this should be 0, set it to 'zero' (perl can't handle the number 0 as a command line argument)\n".
+	"\t\$matrix2.csv is the second genelist\n".
+	"\t\$sortkey2 is the column number in the second genelist where the common identifiers are stored\n".
+	"\t\tNB! NB! If this should be 0, set it to 'zero' (perl can't handle the number 0 as a command line argument)\n\n";
+
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	
+	my $infile_1 = shift(@pars) or die "Parameter error \$infile_1\n\n".$usage;
+	my $sortkey_1 = shift(@pars) or die "Parameter error \$sortkey_1\n\n".$usage;
+	my $infile_2 = shift(@pars) or die "Parameter error \$infile_2\n\n".$usage;
+	my $sortkey_2 = shift(@pars) or die "Parameter error \$sortkey_2\n\n".$usage;
+
+	if($sortkey_1 eq "zero")	{	$sortkey_1=0;	}
+	if($sortkey_2 eq "zero")	{	$sortkey_2=0;	}
+	
+	my $outname_1 = "synced_${infile_1}";
+	my $outname_2 = "synced_${infile_2}";
+
+	# Read infiles
+	my @matrix1=fileTools::read_table($infile_1, "csv");
+	my @matrix2=fileTools::read_table($infile_2, "csv");
+
+	# Remove headers
+	my $headerref1 = shift(@matrix1);
+	my $headerref2 = shift(@matrix2);
+	
+	my @new_matrix1=();
+	my @new_matrix2=();
+	
+	# Sort input matrices for faster processing
+	my @s_matrix1 = sort { $a->[$sortkey_1] cmp $b->[$sortkey_1] } @matrix1;
+	my @s_matrix2 = sort { $a->[$sortkey_2] cmp $b->[$sortkey_2] } @matrix2;
+
+	# Loop over genes in first matrix
+	FIRST: for(my $c=0; $c<=$#s_matrix1; $c++)
+		{
+		# Loop over genes in second matrix
+		SECOND: for(my $d=0; $d<=$#s_matrix2; $d++)
+			{
+			if($s_matrix1[$c][$sortkey_1] eq $s_matrix2[$d][$sortkey_2])
+				{
+				push(@new_matrix1, $s_matrix1[$c]);
+				push(@new_matrix2, $s_matrix2[$d]);
+				next FIRST;
+				}
+			}
+		}
+
+	# Add headers to new matrices
+	unshift(@new_matrix1, $headerref1);
+	unshift(@new_matrix2, $headerref2);
+		
+	# Write new matrices to files
+	fileTools::write_table(\@new_matrix1, "csv", $outname_1, "lin");
+	fileTools::write_table(\@new_matrix2, "csv", $outname_2, "lin");
+	}
+
+# Applies a function (mean, median, min, max) to all rows ($row_or_col=”row”) or columns ($row_or_col=”col”)
+# in a matrix and returns the resulting values as an array.
+sub apply
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$row_or_col, \$function)'\n\nwhere".
+	"\t\$matrixref is a reference to a matrix\n".
+	"\t\$row_or_col  Set to 'row' if '\$function' should be applied to rows, or to 'col' if it should be applied to columns\n".
+	"\t\$function is the function that should be applied to the rows or columns. Options are 'mean', 'median', 'min', 'max', 'geomean', 'stdev', 'variance'\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {	$el = text::trim($el);	}
+	my $matrixref = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	my $row_or_col = shift @pars or die $usage;
+	my $function = shift @pars or die $usage;
+
+	my @matrix = @{$matrixref};
+	my @final_results=();
+
+	if($row_or_col eq "col")	{	@matrix=matrixTools::transpose_matrix(\@matrix);	}
+	
+	# Loop over rows (or columns) in matrix and compute aggregate values
+	my @aggregate_values=();
+	my $result="";
+	for(my $cc=0; $cc<=$#matrix; $cc++)
+		{
+		if($function eq "mean")	{	$result=stats::mean($matrix[$cc]);	}
+		elsif($function eq "median")	{	$result=stats::median($matrix[$cc]);	}
+		elsif($function eq "min")	{	$result=stats::min($matrix[$cc]);	}
+		elsif($function eq "max")	{	$result=stats::max($matrix[$cc]);	}
+		elsif($function eq "geomean")	{	$result=stats::geometric_mean($matrix[$cc]);	}
+		elsif($function eq "stdev")	{	$result=stats::stdev($matrix[$cc]);	}
+		elsif($function eq "variance")	{	$result=stats::variance($matrix[$cc]);	}
+		else	{	die "Function $function isn't supported by this subroutine ${subname}. $usage";	}
+		
+		push(@aggregate_values, $result);
+		}
+		
+	return(@aggregate_values);
+	}
+
+# Returns the number of rows and columns of a matrix (given as a matrix reference), as an array. 
+sub dim
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref)'\n\nwhere".
+	"\t\$matrixref is a reference to a matrix\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	
+	# Processing
+	my @matrix = @{$matrixref};
+	my $num_rows = scalar(@matrix);
+	my @transposed_matrix=matrixTools::transpose_matrix(\@matrix);
+	my $num_cols = scalar(@transposed_matrix);
+	my @dimensions = ($num_rows, $num_cols);
+	
+	return(@dimensions);
+	}
+	
+# Takes a matrix and a range of rows and columns and replaces that range (chunk) with another specified marix (of those dimensions).
+# Specify the range to be replaced as “1_4_to_3_7” (replace the chuck starting at row 1, column 4 and ending at row 3, column 7).
+sub replace_matrix_chunk
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$argument1, \$argument2, \@arguments3)'\n\nwhere".
+	"\t\$argument1 can be either 'X' or 'Y'\n".
+	"\t\$argument2 is a file in XX format\n".
+	"\t\@arguments3 is a list of arguments\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;
+	my $dim_string = shift @pars or die $usage;
+	my $chunkref = shift @pars or die $usage;
+
+	# Processing
+	my @matrix = @{$matrixref};
+	my @chunk = @{$chunkref};
+	
+	my ($startrow, $startcol, $to, $endrow, $endcol) = split("_", $dim_string);
+	$startrow--; $endrow--; $startcol--; $endcol--;
+	
+	# If the specified chunk of the matrix and the replacement chunk don't have equal dimensions,
+	# terminate the program with an error message.
+	my @specdims = (($endrow-$startrow+1),($endcol-$startcol+1));
+	my @repdims=matrixTools::dim(\@chunk);
+	my $equal_dims=listTools::array_equality(\@specdims, \@repdims);
+	if($equal_dims eq "n")	{	die "The specified part of the matrix doesn't have the same size as the replacement chunk.\nCheck the dimensions and try again!\n";	}
+	
+	#print "$specdims[0] $specdims[1]\n";
+	#print "$repdims[0] $repdims[1]\n";
+	
+	# Loop over specified row and columns in @matrix
+	for(my $mrow=$startrow; $mrow<=$endrow; $mrow++)
+		{
+		my $rrow = $mrow - $startrow;
+		for(my $mcol=$startcol; $mcol<=$endcol; $mcol++)
+			{
+			my $rcol = $mcol - $startcol;
+			$matrix[$mrow][$mcol] = $chunk[$rrow][$rcol];
+			}
+		}
+	
+	return(@matrix);
+	}
+
+# Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those columns in the matrix. They are returned as a matrix.
+# Note that more columns than one must be requested (otherwise use subroutine ‘get_matrix_columns_as_rows’). Column numbering begins at 1 rather than 0.
+sub get_matrix_columns
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference, \$column_index1, \@column_index2 etc...)'\n\nwhere".
+	"\t\$matrix_reference is a reference to the matrix from which columns should be retrieved\n".
+	"\t\$column_index1, column_index2 etc ... are the numbers from left to right of the columns that should be retrieved (numbering begins at 1)\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matref = shift @pars or die $usage;	
+	my @cols = @pars or die $usage;
+	
+	# Processing
+	my @matrix_rows=matrixTools::get_matrix_columns_as_rows($matref, @cols);
+	my @transposed_matrix=matrixTools::transpose_matrix(\@matrix_rows);
+
+	return(@transposed_matrix);
+	}
+	
+	
+# Checks whether two matrices (specified as matrix references) are equal, and returns “y” if they are and “n” if they aren’t.
+sub matrix_equality
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference1, \$matrix_reference2)'\n\nwhere".
+	"\t\$matrix_reference1 is a reference to the first matrix to be compared\n".
+	"\t\$matrix_reference2 is a reference to the second matrix to be compared\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matref1 = shift @pars or die $usage;
+	my $matref2 = shift @pars or die $usage;
+	my @matrix1 = @{$matref1};
+	my @matrix2 = @{$matref2};
+	
+	# Check if the matrices have the same dimensions (if they don't they are not equal)
+	my @dim1=matrixTools::dim($matref1);
+	my @dim2=matrixTools::dim($matref2);
+	my $same_dims=listTools::array_equality(\@dim1, \@dim2);
+	my $matrices_equal = "y";
+	if($same_dims eq "n")	{	$matrices_equal = "n";	}
+	
+	# If the dimensions are equal, check if all values are equal
+	elsif($same_dims eq "y")
+		{
+		# Loop over rows in matrix 1
+		for(my $cc=0; $cc<=$#matrix1; $cc++)
+			{
+			my @row1 = @{$matrix1[$cc]};
+			my @row2 = @{$matrix2[$cc]};
+			my $rows_equal=listTools::array_equality(\@row1, \@row2);
+			if($rows_equal eq "n")	{	$matrices_equal = "n"; last;	}
+			my $rad = 1+$cc;
+			print "Rows $rad equal: $rows_equal\n";
+			}
+		}
+
+	else	{	die "\n\tEquality of matrices couldn't be evalueated because of an internal error\n";	}
+	return($matrices_equal);
+	}
 return(1);
 
 # end functions

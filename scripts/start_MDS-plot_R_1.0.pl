@@ -1,11 +1,13 @@
 # DESCRIPTION: This script takes a gene expression matrix (in csv format) and adds a header containing sample names to it. It calculates the average
 # expression for each gene across samples (across columns) and adds that value as an additional column. It then sorts the genes from highest
-# to lowest average expression.
+# to lowest average expression, after which it uses the MDS_plot_2.0.R to produce multidimensional scaling (MDS) plots for the data.
 # end description
 
 ########################################## Universal perl script header ##########################################
 
 #!/usr/bin/perl
+
+# perl_script_update
 
 # Load libraries that this script depends on
 use warnings;
@@ -24,7 +26,9 @@ use IO::Uncompress::Gunzip qw(gunzip);
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
 # in common with this repository.
-my $scripts = $FindBin::Bin;
+my $maintain = $FindBin::Bin;
+my $scripts = $maintain;
+$scripts =~ s/\/maintainance/\/scripts/;
 my $modules = $scripts;
 $modules =~ s/\/scripts/\/modules/;
 
@@ -46,6 +50,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -67,7 +73,10 @@ my $rscript = "Rscript";
 ########################################## Processing ##########################################
 
 # Declare variables and filehandles
-my $usage="Usage: perl start_scaleR.pl matrix.csv sample_name_01 sample_name_02 ... colour_sample_1 colour_sample_2 ...";	# sample_names_file.txt is a textfile with names of all samples included in the analysis, one name on each line
+my $usage="Usage error for script ${0}. Correct usage: 'perl $0 \$expression_matrix.csv \$sample_name_01 \$sample_name_02 ... \$colour_sample_1 \$colour_sample_2 etc...'\n\nwhere".
+"\t\$expression_matrix.csv is a gene expression matrix file - without headers - in csv format\n".
+"\t\$sample_name_01, \$sample_name_02 etc. are the names of the samples/libraries in the dataset\n".
+"\t\$colour_sample_01, \$colour_sample_02 etc. are the colours that samples should be represented by in the output plots\n\n";
 my $infile = shift or die $usage;
 if(!open(IN, $infile))	{	die "Couldn't open $infile";	}
 

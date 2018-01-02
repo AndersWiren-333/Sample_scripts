@@ -5,6 +5,8 @@
 
 #!/usr/bin/perl
 
+# perl_script_update
+
 # Load libraries that this script depends on
 use warnings;
 use strict;
@@ -22,7 +24,9 @@ use IO::Uncompress::Gunzip qw(gunzip);
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
 # in common with this repository.
-my $scripts = $FindBin::Bin;
+my $maintain = $FindBin::Bin;
+my $scripts = $maintain;
+$scripts =~ s/\/maintainance/\/scripts/;
 my $modules = $scripts;
 $modules =~ s/\/scripts/\/modules/;
 
@@ -44,6 +48,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -143,7 +149,7 @@ for(my $d=0; $d<=$#query_files; $d++)
 		{
 		my $query_file_gz = $query_file;
 		$query_file =~ s/.gz//;
-		system("$uncompress $query_file_gz");
+		gunzip $query_file_gz => $query_file; unlink($query_file_gz);
 		}
 		
 	push(@stats_vector, $query_file, "");
@@ -176,12 +182,12 @@ for(my $d=0; $d<=$#query_files; $d++)
 			my $perc_total = ($countT/$fa_total)*100;
 			my $perc_unique = ($countU/$fa_unique)*100;
 			push(@stats_vector, "", $countT, $perc_total, $countU, $perc_unique, $complex, $cop_per_read, $countM);
-			if(($zip eq "all") or ($zip eq "out"))	{	system("$compress $outname");	}
+			if(($zip eq "all") or ($zip eq "out"))	{	gzip "$outname" => "${outname}.gz"; unlink($outname);	}
 			}
 		} # Loop over targets ends here
 	my $outline = join(",", @stats_vector);
 	print($stat "$outline\n");
-	if(($zip eq "all") or ($zip eq "in"))	{	system("$compress $query_file");	}
+	if(($zip eq "all") or ($zip eq "in"))	{	gzip "$query_file" => "${query_file}.gz"; unlink($query_file);	}
 	} # Loop over query files ends here
 
 close($stat);

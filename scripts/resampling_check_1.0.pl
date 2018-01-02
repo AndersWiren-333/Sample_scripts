@@ -6,6 +6,8 @@
 
 #!/usr/bin/perl
 
+# perl_script_update
+
 # Load libraries that this script depends on
 use warnings;
 use strict;
@@ -23,7 +25,9 @@ use IO::Uncompress::Gunzip qw(gunzip);
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
 # in common with this repository.
-my $scripts = $FindBin::Bin;
+my $maintain = $FindBin::Bin;
+my $scripts = $maintain;
+$scripts =~ s/\/maintainance/\/scripts/;
 my $modules = $scripts;
 $modules =~ s/\/scripts/\/modules/;
 
@@ -45,6 +49,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -128,10 +134,10 @@ my $compress="gzip";
 my $uncompress="gunzip";
 
 my @numbers=(0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50);
-
+my $stat_header = "File,Total_reads,Unique_reads,Complexity,Copies_per_read,Total_genome_matching_reads_1mm,Perc_genome_matching_reads_1mm,".
+"Unique_genome_matching_reads_1mm,Perc_unique_genome_matching_reads,Complexity_genome_matching_reads_1mm,Copies_per_read_genome_matching_reads_1mm";
 if(!open(STAT, ">>stats_subsampling_check.csv"))	{	die "Couldn't create statistics outfile\n";	}
-print(STAT 
-"File,Total_reads,Unique_reads,Complexity,Copies_per_read,Total_genome_matching_reads_1mm,Perc_genome_matching_reads_1mm,Unique_genome_matching_reads_1mm,Perc_unique_genome_matching_reads,Complexity_genome_matching_reads_1mm,Copies_per_read_genome_matching_reads_1mm\n");
+print(STAT "$stat_header\n");
 
 # Loop over samples
 for(my $c=0; $c<=$#samples; $c++)

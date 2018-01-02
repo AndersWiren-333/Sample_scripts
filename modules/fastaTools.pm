@@ -15,6 +15,8 @@ package fastaTools;
 
 ########################################################## Universal perl module header ##########################################################
 
+# perl_module_update
+
 # Load libraries that this module depends on
 use warnings;
 use strict;
@@ -37,6 +39,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -56,6 +60,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -68,28 +74,27 @@ my $rscript = "Rscript";
 # Reads a fasta file into a matrix
 sub fasta_to_matrix
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file)'\n\nwhere".
-        "\t\$fasta_file is the file to read into a matrix\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file)'\n\nwhere".
+	"\t\$fasta_file is the file to read into a matrix\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	my $fa = Bio::SeqIO->new('-format' => 'fasta', '-file' =>  "$infile");
 	my @matrix=();
 
 	while(my $seq = $fa->next_seq())
 		{
-        	my $sequence = $seq->seq();
+        my $sequence = $seq->seq();
 		$sequence = uc(text::trim($sequence));
-        	my $id = $seq->display_id();
+        my $id = $seq->display_id();
 		$id =~ s/>//;
 		$id = text::trim($id);
-	        push(@matrix, [$id, $sequence]);
+		push(@matrix, [$id, $sequence]);
 		}
 
-	#@matrix = sort { $a->[0] cmp $b->[0] } @matrix;
 	return(@matrix);
 	}
 
@@ -109,10 +114,10 @@ sub fasta_to_matrix2
 
         # First add each line as an element to an array
         while(<IN>)
-                {
-                my $line = text::trim($_);
-                push(@arr, $line);
-                }
+			{
+			my $line = text::trim($_);
+			push(@arr, $line);
+			}
         close(IN);
 
         # If the first line isn't an id line, exit with an error message
@@ -125,41 +130,41 @@ sub fasta_to_matrix2
         my $tempstring="";
 
         for(my $cc=0; $cc<=$#arr; $cc++)
-                {
-                my $line = $arr[$cc];
+			{
+			my $line = $arr[$cc];
 
-                # If this is an id line
-                if($line =~ /^>/)
-                        {
-                        # If it is the first id line, just add it to the matrix
-                        $line =~ s/>//;         # Remove the angle bracket from the ID line
-                        if($cc==0)      {       $matrix[$seqno][0]=$line;       }
+			# If this is an id line
+			if($line =~ /^>/)
+				{
+				# If it is the first id line, just add it to the matrix
+				$line =~ s/>//;         # Remove the angle bracket from the ID line
+				if($cc==0)      {       $matrix[$seqno][0]=$line;       }
 
-                        # If it is any other id line, finish adding the preceding sequence to the matrix, then add the new id line
-                        else
-                                {
-                                $matrix[$seqno][1] = $tempstring;
-                                $tempstring="";
-                                $seqno++;
-                                $matrix[$seqno][0]=$line;
-                                }
-                        }
+				# If it is any other id line, finish adding the preceding sequence to the matrix, then add the new id line
+				else
+					{
+					$matrix[$seqno][1] = $tempstring;
+					$tempstring="";
+					$seqno++;
+					$matrix[$seqno][0]=$line;
+					}
+				}
 
-                # Else, if it is a sequence line
-                else
-                        {
-                        # If it is the last line in the file
-                        if($cc==$#arr)
-                                {
-                                $tempstring = "$tempstring"."$line";
-                                $matrix[$seqno][1]=$tempstring;
-                                $tempstring="";
-                                }
+			# Else, if it is a sequence line
+			else
+				{
+				# If it is the last line in the file
+				if($cc==$#arr)
+					{
+					$tempstring = "$tempstring"."$line";
+					$matrix[$seqno][1]=$tempstring;
+					$tempstring="";
+					}
 
-                        # If it is any other sequence line
-                        else    {       $tempstring = "$tempstring"."$line";    }
-                        }
-                } # Loop over elements in array ends here
+				# If it is any other sequence line
+				else    {       $tempstring = "$tempstring"."$line";    }
+				}
+			} # Loop over elements in array ends here
 
         return(@matrix);
 	}
@@ -593,7 +598,7 @@ sub remove_alignment_target_from_fasta
 	my @pat_matrix=fileTools::read_table($patfile, "tsv");
 
 	# Pick out column 2
-	my @match_reads=matrixTools::get_matrix_columns(\@pat_matrix, 1);
+	my @match_reads=matrixTools::get_matrix_columns_as_rows(\@pat_matrix, 1);
 
 	# De-redundize @match_reads
 	my @nr_match_reads=misc::unique_list(\@match_reads, "alph");
@@ -634,6 +639,49 @@ sub remove_alignment_target_from_fasta
 	#return($something);
 	}
 
+# Description of what the function does and how to use it
+sub fasta_from_patman
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$patfile, \$outname)'\n\nwhere".
+	"\t\$patfile is the name of the patman file to be converted to fasta\n".
+	"\t\$outname is the preferred name of the fasta outfile\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;	
+	my $outname = shift @pars or die $usage;
+
+	# Uncompress infile if necessary
+	my ($patfile_gz, $patfile)=misc::check_compressed($infile);
+	
+	# Read infile into matrix (patman outfiles are in tsv format)
+	my @matrix=fileTools::read_table($patfile, "tsv");
+
+	# Get sequences
+	my @seqs=matrixTools::get_matrix_columns_as_rows(\@matrix, 2);
+	
+	# Remove any duplicates from @seqs
+	my @useqs=misc::unique_list(\@seqs, "alph");
+
+	# Loop over sequences and print them to an outfile
+	open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
+	
+	for(my $cc=0; $cc<=$#useqs; $cc++)
+		{
+		my $id = $useqs[$cc];
+		my ($seq, $abund) = split("-", $id);
+		print $out "$id\n$seq\n";
+		}
+		
+	close($out);
+	
+	my $num=scalar(@useqs);
+	print "\n$num\n";
+	}	
+	
 return(1);
 
 # end functions

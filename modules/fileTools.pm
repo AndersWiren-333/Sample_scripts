@@ -14,6 +14,8 @@ package fileTools;
 
 ########################################################## Universal perl module header ##########################################################
 
+# perl_module_update
+
 # Load libraries that this module depends on
 use warnings;
 use strict;
@@ -36,6 +38,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -55,6 +59,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -68,14 +74,14 @@ my $rscript = "Rscript";
 sub read_table
 	{
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$filetype)'\n\nwhere".
-        "\t\$infile is the file to be read\n".
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$filetype)'\n\nwhere".
+	"\t\$infile is the file to be read\n".
 	"\t\$filetype is the type of file to be read. Options are 'csv', 'tsv' and 'semicsv'\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
 	my $filetype = shift @pars or die $usage;
 
 	# Set field separator
@@ -97,8 +103,7 @@ sub read_table
 		my @new_arr=();
 		foreach my $el (@arr)
 			{
-			$el = text::trim($el);
-			#unless($el eq "")	{	push(@new_arr, $el);	}
+			unless($el eq "")	{	$el = text::trim($el);	}
 			$el =~ s/,/_/g;
 			push(@new_arr, $el);
 			}
@@ -109,60 +114,73 @@ sub read_table
 	}
 
 
-# Prints a matrix (= table) to a file. The file can be either a csv (comma separated values), a tsv (tab separated values) or a semicsv (semi-colon separated values) file
+# Prints a matrix (= table) to a file. The file can be either a csv (comma separated values), a tsv (tab separated values) or a semicsv (semi-colon separated values) file.
+# If desired, several matrices can be written to the same file. References to additional matrices (except the first one) are given after the other arguments at the command line.
 sub write_table
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref, \$filetype, \$outfile_name, \$linebreaks_lin_win)'\n\nwhere".
-        "\t\$matrix_ref is a reference to a matrix holding the data to be printed\n".
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref, \$filetype, \$outfile_name, \$linebreaks_lin_win, \$matrix_ref2, \$matrix_ref3 ...)'\n\nwhere".
+	"\t\$matrix_ref is a reference to a matrix holding the data to be printed\n".
 	"\t\$filetype is the type of file to be created. Options are 'csv', 'tsv' and 'semicsv'\n".
-        "\t\$outfile_name is the name you want the outfile to have\n".
-	"\t\$linebreaks_lin_win are the type of linebreaks to be used in the file. Options are 'lin' (Linux/Unix, \\n) and 'win' (Windows, \\r\\n)\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	"\t\$outfile_name is the name you want the outfile to have\n".
+	"\t\$linebreaks_lin_win are the type of linebreaks to be used in the file. Options are 'lin' (Linux/Unix, \\n) and 'win' (Windows, \\r\\n)\n".
+	"\t\$matrix_ref2, \$matrix_ref3 etc are references to additional matrices to be written to the same outfile, if desired.\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $filetype = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
 	my $linebreak = shift @pars or die $usage;
-
-	my @matrix = @{$matrixref};
+	my @all_matrices=();
+	push(@all_matrices, $matrixref);
+	if(@pars)	{	push(@all_matrices, @pars);	}
 
 	# Set field separator
-        my $separator="";
-        if($filetype eq "csv")  {       $separator = ",";       }
-        elsif($filetype eq "tsv")  {       $separator = "\t";       }
-        elsif($filetype eq "semicsv")  {       $separator = ";";       }
-        else    {       die "\tUnknown filetype for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Options are 'csv, 'tsv' and 'semicsv'\n";     }
+	my $separator="";
+	if($filetype eq "csv")  {       $separator = ",";       }
+	elsif($filetype eq "tsv")  {       $separator = "\t";       }
+	elsif($filetype eq "semicsv")  {       $separator = ";";       }
+	else    {       die "\tUnknown filetype for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Options are 'csv, 'tsv' and 'semicsv'\n";     }
 
 	# Create outfile
-        open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
+	open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
 
-	for(my $cc=0; $cc<=$#matrix; $cc++)
+	# Loop over input matrices
+	for(my $zz=0; $zz<=$#all_matrices; $zz++)
 		{
-		my @arr = @{$matrix[$cc]};
-		my $outline = join("$separator", @arr);
-		if($linebreak eq "lin")	{	print($out "$outline\n");	}
-		elsif($linebreak eq "win") {       print($out "$outline\r\n");       }
+		my $matref = $all_matrices[$zz];
+		my @matrix = @{$matref};
+	
+		# Loop over rows in individual matrix
+		for(my $cc=0; $cc<=$#matrix; $cc++)
+			{
+			my @arr = @{$matrix[$cc]};
+			my $outline = join("$separator", @arr);
+			if($linebreak eq "lin")	{	print($out "$outline\n");	}
+			elsif($linebreak eq "win") {       print($out "$outline\r\n");       }
+			}
+			
+		unless(scalar(@all_matrices)==1)	{	print $out "\n\n";	}
 		}
-        close($out);
+	close($out);
 	}
 
 # Converts a table file (csv, tsv or semicsv) to another format (csv, tsv or semicsv)
 sub convert_table
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$infile_type, \$outfile_type, \$outfile_linebreaks_lin_win)'\n\nwhere".
-        "\t\$infile is the file to be converted\n".
-        "\t\$infile_type is the type of infile. Options are 'csv' (comma separated values), 'tsv' (tab separated values) and 'semicsv' (semi-colon separated values)\n".
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$infile_type, \$outfile_type, \$outfile_linebreaks_lin_win)'\n\nwhere".
+	"\t\$infile is the file to be converted\n".
+	"\t\$infile_type is the type of infile. Options are 'csv' (comma separated values), 'tsv' (tab separated values) and 'semicsv' (semi-colon separated values)\n".
 	"\t\$outfile_type is the type of file to be created. Options are 'csv' (comma separated values), 'tsv' (tab separated values) and 'semicsv' (semi-colon separated values)\n".
-        "\t\$linebreaks_lin_win are the type of linebreaks to be used in the created file. Options are 'lin' (Linux/Unix, \\n) and 'win' (Windows, \\r\\n)\n\n";
+	"\t\$linebreaks_lin_win are the type of linebreaks to be used in the created file. Options are 'lin' (Linux/Unix, \\n) and 'win' (Windows, \\r\\n)\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
 
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $infile_type = shift @pars or die $usage;
 	my $outfile_type = shift @pars or die $usage;
 	my $linebreak = shift @pars or die $usage;
@@ -269,9 +287,9 @@ sub concat_PE
 	my @new_names=();
 
 	for(my $c=0; $c<$num_pairs; $c++)
-		{
-		my $infile1=shift(@filenames);
-		my $infile2=shift(@filenames);
+        	{
+        	my $infile1=shift(@filenames);
+        	my $infile2=shift(@filenames);
 	
 		my ($file1_gz, $file1)=misc::check_compressed($infile1);
 		my ($file2_gz, $file2)=misc::check_compressed($infile2);
@@ -282,7 +300,6 @@ sub concat_PE
 		push(@new_names, $newname);
 
 		if($remove_infiles eq "y")	{	unlink($file1, $file2);	}
-		
 		
 		if(($remove_infiles eq "n") and ($zip eq "in"))
 			{	
@@ -299,8 +316,7 @@ sub concat_PE
 			{	
 			gzip "$newname" => "${newname}.gz"; unlink($newname);
 			}
-        }	
-
+		}	
         return(@new_names);
 	}
 
@@ -563,6 +579,25 @@ sub read_diff_expr_sample_list
 	return(@result);
 	}
 
+# Compresses a file into a .gz file, in a platform independent way.
+sub compress
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
+	"\t\$infile is the file to be compressed\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;	
+	my $newname = "${infile}.gz";
+	
+	gzip $infile => $newname;
+	unlink($infile);
+	}	
+	
+	
 return(1);
 
 # end functions

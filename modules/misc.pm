@@ -8,11 +8,14 @@ package misc;
 # sub count_aligned_reads($patman_output_file)
 # sub blast_to_matrix($blastfile.tsv, $top_num_hits, $exclude_string1, $exclude_string2 etc...)
 # sub check_compressed($filename)
-# sub length_normalise_matrix(\@matrix)
 # sub length_from_id_to_column($infile, $outname)
+# sub shift_input_cols(\@cols);
+# sub type($value)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
+
+# perl_module_update
 
 # Load libraries that this module depends on
 use warnings;
@@ -36,6 +39,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -55,6 +60,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -294,13 +301,13 @@ sub file_to_matrix
         }
 
 
-# Removes duplicates from a matrix
+# Removes duplicates from a matrix. Specify which column (starting at 1) the uniqueness should be based on.
 sub unique_matrix
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage = "\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$matrixref, \$column, \$num_or_alph, \$headers_y_n)'\n\nwhere\n".
-        "\t\$matrixref is a reference to the matrix you want to check for duplicates\n".
+	"\t\$matrixref is a reference to the matrix you want to check for duplicates\n".
 	"\t\$column is the index of the column you want to base the uniqueness on (where column 1 has index 1, 2 has index 2 etc.\n)".
 	"\t\$num_or_alph indicates whether the values in the chosen column are numerical or alphabetic ('num' or 'alph')\n".
 	"\t\$headers_y_n is an indicator of whether the input matrix has headers or not. Options are 'y' for yes and 'n' for no.\n\n";
@@ -358,49 +365,49 @@ sub unique_matrix
 
 # Removes duplicates from an array
 sub unique_list
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage = "\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$arrayref, \$num_or_alph)'\n\nwhere\n".
-        "\t\$arrayref is a reference to an aray or matrix\n".
-        "\t\$num_or_alph indicates whether the values in the chosen column are numerical or alphabetic ('num' or 'alph')\n\n";
-        my @pars = @_ or die $usage;
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage = "\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$arrayref, \$num_or_alph)'\n\nwhere\n".
+	"\t\$arrayref is a reference to an aray or matrix\n".
+	"\t\$num_or_alph indicates whether the values in the chosen column are numerical or alphabetic ('num' or 'alph')\n\n";
+	my @pars = @_ or die $usage;
 	foreach my $el (@pars)	{	$el = text::trim($el);	}
-        my $arref = $pars[0];
-        my $num_or_alph = $pars[1];
-        if(($num_or_alph ne "num") and ($num_or_alph ne "alph"))        {       die "The \$num_or_alph argument for sub $subname must be either 'num' or 'alph'. Try again!\n";      }
+	my $arref = $pars[0];
+	my $num_or_alph = $pars[1];
+	if(($num_or_alph ne "num") and ($num_or_alph ne "alph"))        {       die "The \$num_or_alph argument for sub $subname must be either 'num' or 'alph'. Try again!\n";      }
 
-        my @arr = @{$arref};
-        if($num_or_alph =~ m/num/)      {       @arr = sort { $a <=> $b } @arr;   }
-        elsif($num_or_alph =~ m/alph/)  {       @arr = sort { $a cmp $b } @arr;   }
+	my @arr = @{$arref};
+	if($num_or_alph =~ m/num/)      {       @arr = sort { $a <=> $b } @arr;   }
+	elsif($num_or_alph =~ m/alph/)  {       @arr = sort { $a cmp $b } @arr;   }
 
-        # Loop over lines in matrix/arr
-        my @new_arr=();
-        my $comp_val = $arr[0];
-        push(@new_arr, $arr[0]);
+	# Loop over lines in matrix/arr
+	my @new_arr=();
+	my $comp_val = $arr[0];
+	push(@new_arr, $arr[0]);
 
-        for(my $cc=1; $cc<=$#arr; $cc++)
-                {
-                my $value = $arr[$cc];
-                if($num_or_alph =~ m/num/)
-                        {
-                        unless($value==$comp_val)
-                                {
-                                push(@new_arr, $arr[$cc]);
-                                $comp_val=$value;
-                                }
-                        }
-                if($num_or_alph =~ m/alph/)
-                        {
-                        unless($value eq $comp_val)
-                                {
-                                push(@new_arr, $arr[$cc]);
-                                $comp_val=$value;
-                                }
-                        }
-                }
-        return(@new_arr);
-        }
+	for(my $cc=1; $cc<=$#arr; $cc++)
+		{
+		my $value = $arr[$cc];
+		if($num_or_alph =~ m/num/)
+			{
+			unless($value==$comp_val)
+					{
+					push(@new_arr, $arr[$cc]);
+					$comp_val=$value;
+					}
+			}
+		if($num_or_alph =~ m/alph/)
+			{
+			unless($value eq $comp_val)
+					{
+					push(@new_arr, $arr[$cc]);
+					$comp_val=$value;
+					}
+			}
+		}
+	return(@new_arr);
+	}
 
 # Counts the number of total, unique and multiply aligning reads in a patman alignment file and returns those numbers along with sample complexity and
 # copies per read. This is the array returned: @($countT, $countU, $complex, $cop_per_read, $countM)
@@ -765,44 +772,6 @@ sub check_compressed
 	my @outarr=($filename_gz, $filename);
         return(@outarr);
 	}
-	
-# This function takes a gene expression matrix and normalises expression values based on the length of genes. It returns the normalised matrix, with expression values per 1000 bp of gene.
-# The matrix must have a header, contain a column called "length", the first column must be the gene identifier, and the matrix must not contain any other columns than these two and the
-# expression value columns (i.e. no other annotation information).
-sub length_normalise_matrix
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref)'\n\nwhere".
-        "\t\$matrix_ref is a reference to the matrix to be normalised\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrix_ref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
-	my @matrix = @{$matrix_ref};
-
-	# Send the header to an array
-	my $headerref = shift(@matrix);
-	my @header = @{$headerref};
-	my ($length_ind) = grep { $header[$_] eq "length" } 0..$#header; 
-
-	# Loop over @matrix and normalise all values for each gene
-	for(my $cc=0; $cc<=$#matrix; $cc++)
-		{
-		my $length = $matrix[$cc][$length_ind];
-		my $norm_factor = 1000/$length;		
-
-		# Loop over sample expression values and normalise them
-		for(my $dd=1; $dd<$length_ind; $dd++)
-			{
-			my $value = $matrix[$cc][$dd];
-			$matrix[$cc][$dd] = $value * $norm_factor;
-			}
-		} 
-
-	# Add the header again
-	unshift(@matrix, \@header);
-        return(@matrix);
-        }
 
 # Strips the Feature_IDs in the first column an expression matrix of the ending feature length information (format "gene_ABC_23_445") and
 # converts it into a length column that is added to the matrix
@@ -850,6 +819,54 @@ sub length_from_id_to_column
 	fileTools::write_table(\@matrix, "csv", $outname, "lin");
         }
 
+# Given a reference to an array containing numbers, this subroutine subtracts 1 from each number and returns an array with the new numbers.
+# Perl can’t accept 0 (zero) as a command line argument for scripts or subroutines, so when you tell a script that you want to pick out the
+# first column in a matrix, you have to tell it to pick column 1. But since columns (and rows in arrays) in perl are always numbered from 0,
+# you have to subtract 1 from each column number you give a script. This function does that.
+sub shift_input_cols
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to the array whose numbers should be decremented by 1\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;
+	my @arr = @{$arref};
+
+	# Loop over elements in @arr and subtract 1 from them
+	for(my $c=0; $c<=$#arr; $c++)	{	$arr[$c]--;	}
+	
+	return(@arr);
+	}
+	
+
+sub type
+	{
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$value)'\n\nwhere".
+	"\t\$value is the value to whose type should be checked\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	if(scalar(@pars) != 1)	{	die "\tWrong number of arguments for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line})\n$usage\n";	}
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $value = shift @pars or 0;
+
+	# Processing
+	my $dec=`perl -MPOSIX=locale_h -e "print localeconv()->{decimal_point}`;	# Get the decimal separator for the current system
+	my $type="";
+	if($value =~ /^[1234567890\-\"$dec"]+$/)	{	$type = "num";	}
+	else	{	$type = "char";	}
+	
+	return($type);
+	}	
+
+	
+	
 return(1);
 
 # end functions

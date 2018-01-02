@@ -1,11 +1,13 @@
 package compareSets;
 
 # sub check_range_overlap($on_end_overlap_y_n, $startA, $stopA, $startB, $stopB)
-# sub merge_ovelapping_ranges($array_reference);
+# sub merge_overlap_range($array_reference, $strict_overlap_y_n, $log_y_n);
 # sub check_range_lists_overlap($array_reference_1, $array_reference_2)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
+
+# perl_module_update
 
 # Load libraries that this module depends on
 use warnings;
@@ -29,6 +31,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -48,6 +52,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -62,19 +68,19 @@ my $rscript = "Rscript";
 sub check_range_overlap
 	{
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$startA, \$stopA, \$startB, \$stopB)'\n\nwhere".
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$startA, \$stopA, \$startB, \$stopB)'\n\nwhere".
 	"\t\$strict_overlap_y_n. If this is set to 'n', feature_A is considered to overlap feature_B if it stops directly adjacent to the start of feature_B, and similarly at the end of feature_B.\n".
 	"\t\tIf set to 'y' they have to actually overlap.\n".
-        "\t\$startA is the start position of feature A\n".
+	"\t\$startA is the start position of feature A\n".
 	"\t\$stopA is the stop position of feature A\n".
-        "\t\$startB is the start position of feature B\n".
-        "\t\$stopB is the stop position of feature B\n\n";
+	"\t\$startB is the start position of feature B\n".
+	"\t\$stopB is the stop position of feature B\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $strict_overlap = shift @pars or die $usage;
-        my $startA = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+    my $startA = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
 	my $stopA = shift @pars or die $usage;
 	my $startB = shift @pars or die $usage;
 	my $stopB = shift @pars or die $usage;
@@ -113,22 +119,29 @@ sub check_range_overlap
 	return($result);
 	}
 
-# Takes lists
-sub merge_ovelapping_ranges
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$strict_overlap_y_n)'\n\nwhere".
-        "\t\$array_reference is a reference to an array holding individual ranges in the format 'start1_stop1, start2_stop2, start3_stop3 etc.\n".
-	"\t\$strict_overlap_y_n. If this is set to 'n', feature_A is considered to overlap feature_B if it stops directly adjacent to the start of feature_B, and similarly at the end of feature_B.\n\n";
+# Takes (a reference to) and array of ranges in the format "123_456" and checks whether any of the ranges overlap each other.
+# If so it merges those ranges. The updated list of ranges (with some merged) is then returned. Optionally, a log file can be
+# written (option $log_y_n = "y"), e.g. for debugging purposes.
+sub merge_overlap_range
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$strict_overlap_y_n, \$log_y_n)'\n\nwhere".
+	"\t\$array_reference is a reference to an array holding individual ranges in the format 'start1_stop1, start2_stop2, start3_stop3 etc.\n".
+	"\t\$strict_overlap_y_n. If this is set to 'n', feature_A is considered to overlap feature_B if it stops directly adjacent to the start of feature_B, and similarly at the end of feature_B.\n".
+	"\t\$log_y_n. Set this to 'y' if you want a log to be written (e.g. for debugging) or 'n' if you don't\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $strict_overlap = shift @pars or die $usage;
+	my $log_y_n = shift @pars or die $usage;
 	my @arr = @{$arref};	
 
-	# Sort the range array ascending on start and stop
+	# Open a log file
+	open(my $log, ">>", "log_merge_overlapping_ranges_${timestamp}.txt") or die "Subroutine $subname couldn't create logfile\n";
+	
+	# Convert @arr to a table with two columns, start and stop
 	my @matrix=();
 	
 	for(my $cc=0; $cc<=$#arr; $cc++)
@@ -137,10 +150,11 @@ sub merge_ovelapping_ranges
 		push(@matrix, \@start_stop); 
 		}
 
+	# Sort the table ascending on start and stop
 	@matrix = sort { $a->[0] <=> $b->[0] || $a->[1] <=> $b->[1] } @matrix;
 
-	my @new_arr=();
-	my $comp_start="Aunt_Elfrieda";		# By initially setting this to a string, we will get an error message later if the variable fails to be updated where it should (otherwise we may never know)
+	my @new_matrix=();
+	my $comp_start="Aunt_Elfrieda";		# If the variable fails to be updated to a number where, we will get an error (= good)
 	my $comp_stop="Edward_the_Confessor";
 
 	for(my $dd=0; $dd<=$#matrix; $dd++)
@@ -162,7 +176,7 @@ sub merge_ovelapping_ranges
 			$stop = $raw_stop;
 			}
 
-		# If this is the first line in the matrix, set initial values of $satrt and $stop
+		# If this is the first line in the matrix, set initial values of $start and $stop
 		if($dd==0)
 			{
 			$comp_start = $start;
@@ -173,44 +187,104 @@ sub merge_ovelapping_ranges
 		else
 			{
 			# Check if the current range overlaps the comparison range
-			my $overlap=compareSets::check_range_overlap("y", $startA, $stopA, $startB, $stopB);
+			my $overlap=compareSets::check_range_overlap("y", $comp_start, $comp_stop, $start, $stop);
 
-			}
+			# Evaluate result and merge ranges if appropriate
+			
+			if($overlap eq "A_before_B")
+				{
+				# Add A to @new_matrix, set B as new reference range (and loop starts over with next range)
+				if($log_y_n eq "y")	{	print $log "${comp_start}_${comp_stop} vs ${start}_${stop}:   A_before_B\n";	}
+				push(@new_matrix, [($comp_start, $comp_stop)]);
+				$comp_start = $start;
+				$comp_stop = $stop;
+				if($dd==$#matrix)	{	push(@new_matrix, [($comp_start, $comp_stop)]);	}	# If this is the last line, add it's range to @new_matrix
+				}
+				
+			elsif($overlap eq "A_extend_B_left")
+				{
+				# Extend stop of A to stop of B, loop starts over with next range
+				if($log_y_n eq "y")	{	print $log "${comp_start}_${comp_stop} vs ${start}_${stop}:   A_extend_B_left\n";	}
+				$comp_stop = $stop;
+				if($dd==$#matrix)	{	push(@new_matrix, [($comp_start, $comp_stop)]);	}	# If this is the last line, add it's range to @new_matrix
+				}
+				
+			elsif($overlap eq "A_in_B")
+				{
+				# Extend start and stop of A to start and stop of B, loop starts over with next range
+				if($log_y_n eq "y")	{	print $log "${comp_start}_${comp_stop} vs ${start}_${stop}:   A_in_B. Could possibly happen\n";	}
+				$comp_start = $start;
+				$comp_stop = $stop;
+				if($dd==$#matrix)	{	push(@new_matrix, [($comp_start, $comp_stop)]);	}	# If this is the last line, add it's range to @new_matrix
+				}
+				
+			elsif($overlap eq "A_extend_B_both")
+				{
+				# Skip over B and go to next range
+				if($log_y_n eq "y")	{	print $log "${comp_start}_${comp_stop} vs ${start}_${stop}:   A_extend_B_both\n";	}
+				if($dd==$#matrix)	{	push(@new_matrix, [($comp_start, $comp_stop)]);	}	# If this is the last line, add it's range to @new_matrix
+				}
+				
+			elsif($overlap eq "A_extend_B_right")
+				{
+				# Set start of A to start of B, loop starts over with next range
+				if($log_y_n eq "y")	{	print $log "${comp_start}_${comp_stop} vs ${start}_${stop}:   A_extend_B_right. ************This shouldn't happen*****************\n";	}
+				$comp_start = $start;
+				if($dd==$#matrix)	{	push(@new_matrix, [($comp_start, $comp_stop)]);	}	# If this is the last line, add it's range to @new_matrix
+				}
+			
+			elsif($overlap eq "A_after_B")
+				{
+				die "Reference range is after current range. Something must be wrong.\n";
+				}
+			
+			} # Loop over all lines except first one ends
 
+		} # Loop over all lines ends
+	
+	# Convert @new_matrix to an array of the format "111_222", "333_444"
+	my @new_arr = ();
+	
+	for(my $ee=0; $ee<=$#new_matrix; $ee++)
+		{
+		my $new_val = $new_matrix[$ee][0] . "_" . $new_matrix[$ee][1];
+		push(@new_arr, $new_val);
 		}
-
-        return(@new_arr);
+	
+	close($log);
+	if($log_y_n eq "n")	{	unlink("log_merge_overlapping_ranges_${timestamp}.txt");		}
+	return(@new_arr);
 	}
 
+# Takes two lists (arrays) each containing elements that each have a specific location along a discrete scale (the steps are whole numbers, 1,2,3,4...).
+# Determines which elements in list A that overlap elements in list B. Creates two outfiles: one containing the elements from list A that overlap
+# elements in list B and one with the ones that don't. This function is useful for determining e.g. which assembled transcripts overlap previously annotated
+# genes, if their locations on a chromosome/contig is known.
+# sub check_feature_lists_overlap
+	# {
+	# # Set error messages and accept input parameters
+	# my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	# my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$listA_array_ref, \$listB_array_ref)'\n\nwhere".
+	# "\t\$strict_overlap_y_n. If this is set to 'n', feature_A is considered to overlap feature_B if it stops directly adjacent to the start of feature_B, and similarly at the end of feature_B.\n".
+	# "\t\tIf set to 'y' they have to actually overlap.\n".
+	# "\t\$startA is the start position of feature A\n".
+	# "\t\$stopA is the stop position of feature A\n".
+	# "\t\$startB is the start position of feature B\n".
+	# "\t\$stopB is the stop position of feature B\n\n";
 
-# Takes two lists (arrays) each conatining elements that each have a specific location along a discrete scale (the steps ate whole numbers, 1,2,3,4...).
-# Determines whiich elements in list A that overlap elements in list B. Creates two outfiles: one containing the elements from list A that overlap
-# elements in list B and one with the ones that don't.
-sub check_feature_lists_overlap
-	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$listA_array_ref, \$listB_array_ref)'\n\nwhere".
-        "\t\$strict_overlap_y_n. If this is set to 'n', feature_A is considered to overlap feature_B if it stops directly adjacent to the start of feature_B, and similarly at the end of feature_B.\n".
-        "\t\tIf set to 'y' they have to actually overlap.\n".
-        "\t\$startA is the start position of feature A\n".
-        "\t\$stopA is the stop position of feature A\n".
-        "\t\$startB is the start position of feature B\n".
-        "\t\$stopB is the stop position of feature B\n\n";
-
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $strict_overlap = shift @pars or die $usage;
-        my $startA = shift @pars or die $usage; # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
-        my $stopA = shift @pars or die $usage;
-        my $startB = shift @pars or die $usage;
-        my $stopB = shift @pars or die $usage;
+	# my @pars = @_ or die $usage;
+	# foreach my $el (@pars)  {       $el = text::trim($el);  }
+	# my $strict_overlap = shift @pars or die $usage;
+	# my $startA = shift @pars or die $usage; # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	# my $stopA = shift @pars or die $usage;
+	# my $startB = shift @pars or die $usage;
+	# my $stopB = shift @pars or die $usage;
 	
 
 
 
 
-	}
+	# }
 
 return(1);
 

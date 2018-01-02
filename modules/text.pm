@@ -11,6 +11,8 @@ package text;
 
 ########################################################## Universal perl module header ##########################################################
 
+# perl_module_update
+
 # Load libraries that this module depends on
 use warnings;
 use strict;
@@ -33,6 +35,8 @@ my $modules = "";
 if($thisfile =~ m/^(.+)\//)	{	$modules = $1;	}
 my $scripts = $modules;
 $scripts =~ s/modules/scripts/;
+my $maintain = $scripts;
+$maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
 # another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
@@ -52,6 +56,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -65,10 +71,10 @@ my $rscript = "Rscript";
 # Parameters: $string
 sub trim
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$textstring)'\n\nwhere".
-        "\t\$textstring is the string of text that should be trimmed\n\n";
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$textstring)'\n\nwhere".
+	"\t\$textstring is the string of text that should be trimmed\n\n";
 	my $string = shift or 0;
 
 	$string =~ s/\r+//;
@@ -293,7 +299,7 @@ sub remove_spaces_from_csv
 	unlink($infile);
 	move($outname, $infile)	
 	}
-
+	
 return(1);
 
 # end functions

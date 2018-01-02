@@ -1,0 +1,11 @@
+Wrote and tested subroutine fileTools::compress
+
+It compresses a file into a .gz file, in a platform independent way.
+Usage information has been added to Modules_and_functions.xlsx
+
+
+Updated subroutine matrixTools::replace_matrix_chunk to terminate if the user enters the wrong dimensions of the area to be replaced.
+
+Previously the columns to be deleted from a matrix were specified as 0, 1, 2 etc. Since perl can't accept zeros
+as arguments for scripts or subroutines, '0' had to be specified as 'n'. Now column numbering starts at 1, so there
+is no longer any need handle zeros as arguments. Usage information in Modules_and_functions.xlsx updated.

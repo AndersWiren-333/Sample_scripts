@@ -10,6 +10,8 @@
 
 #!/usr/bin/perl
 
+# perl_script_update
+
 # Load libraries that this script depends on
 use warnings;
 use strict;
@@ -27,7 +29,9 @@ use IO::Uncompress::Gunzip qw(gunzip);
 # Set paths to scripts and modules. Setting explicit paths to the scripts and modules in this specific repository (rather than adding paths to @INC, PERLLIB and PATH on
 # your local system) avoids the risk of scripts calling the wrong scripts/modules if you have other repositories on your system that happen to have some script- and module names
 # in common with this repository.
-my $scripts = $FindBin::Bin;
+my $maintain = $FindBin::Bin;
+my $scripts = $maintain;
+$scripts =~ s/\/maintainance/\/scripts/;
 my $modules = $scripts;
 $modules =~ s/\/scripts/\/modules/;
 
@@ -49,6 +53,8 @@ require "$modules/stats.pm";
 require "$modules/text.pm";
 #require "$modules/compareSets.pm";	# This module is still experimental
 require "$modules/fileTools.pm";
+require "$modules/combinatorics.pm";
+require "$modules/db.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
