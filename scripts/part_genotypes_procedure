@@ -1,0 +1,34 @@
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+DELIMITER $$
+
+CREATE PROCEDURE `part_genotypes` ()
+BEGIN
+DECLARE col_names CURSOR FOR
+  SELECT column_name
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE table_name = 'tbl_name'
+  ORDER BY ordinal_position;
+
+
+select FOUND_ROWS() into num_rows;
+
+SET i = 1;
+the_loop: LOOP
+
+   IF i > num_rows THEN
+        CLOSE col_names;
+        LEAVE the_loop;
+    END IF;
+
+
+    FETCH col_names 
+    INTO col_name;     
+
+     #do whatever else you need to do with the col name
+
+    SET i = i + 1;  
+END LOOP the_loop;
+END
