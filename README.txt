@@ -9,23 +9,26 @@ to use individual scripts outside the repository folder structure, make sure you
 set the path to the other scripts and modules (which the scripts may depend on) in the
 header of those scripts.
 
+There is also a "maintainance" folder where template scripts for various languages are stored,
+along with scripts that aid maintainance and updating of the repository.
+
+The "language_references" folder contains textfiles with syntax and usage examples for common
+techniques in the various languages.
+
 *Repository maintenance*
-Scripts with a version number have the universal script header (for the respective language,
-e.g. Perl or R) which makes it easier to call modules and other scripts from within them,
-and which can be updated in all scripts simultaneously by modifying the header of
-"template_script.pl" and then running "update_universal_script_header.pl". This script uses
-"scripts/script_update_list.txt" to determine which scripts should be updated and which
-should not (to exclude a script from updating, either leave it out of the list or put a "#"
-before its name in the list). Similarly, there is a "template_module.pm",
-"update_universal_module_header.pl" and "module_update_list.txt" for updating module
-headers.
+Most Perl scripts have the universal script header which makes it easier to call modules and
+other scripts from within them, and which can be updated in all scripts simultaneously by
+modifying the header of "template_script.pl" and then running "update_perl_headers.pl".
+This script checks for the flag "# perl_script_update" in the header of the relevant scripts.
+Similarly, there is a "template_module.pm" and "update_perl_headers.pl" uses this to update
+the relevant modules in the same way.
 
 Currently, these update mechanisms are in place for (most) perl scripts, but the aim is to
-set them up also for R scripts and other languages that may be used in the future.
+set them up also for R and SQL scripts.
 
 
-*Modules and functions list*
-"Modules_and_functions.xlsx" contains a list of of perl modules and their functions
+*Scripts and functions list*
+"Scripts_and_functions.xlsx" contains a list of of perl scripts and functions
 (subroutines), including descriptions and usage templates that can be copy-pasted
-into new scripts as needed. A similar list for scripts is under construction.
+into new scripts as needed. The list is still under construction and incomplete.
 When you write a new function, module or script, please update this file!
