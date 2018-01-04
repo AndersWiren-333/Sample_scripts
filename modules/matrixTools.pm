@@ -16,6 +16,7 @@ package matrixTools;
 # sub replace_matrix_cols(\@matrix, \@replacement_cols_matrix, $col_to_replace1, $col_to_replace2 etc...)
 # sub get_matrix_columns($matrix_reference, $col1, $col2 etc...)
 # sub matrix_equality($matrixref1, $matrixref2)
+# sub add_seq_lengths_to_matrix_from_fasta($file_or_var, $filename_or_matrixref, $header_y_n, $fasta_file)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -755,6 +756,75 @@ sub matrix_equality
 	else	{	die "\n\tEquality of matrices couldn't be evalueated because of an internal error\n";	}
 	return($matrices_equal);
 	}
+
+# Takes a matrix (as a csv file – set $file_or_var to ‘file’ - or matrix reference – set $file_or_var to ‘var’ - where
+# each row represents a genomic feature (e.g. a gene or transcript and a specified column is a feature ID)) and a fasta
+# file containing the DNA/RNA/protein sequence of the features in the matrix. Using the fasta file the subroutine computes
+# the length of each feature in the matrix, and attaches these lengths to the matrix as a new column. Set $header_y_n to ‘y’
+# if the original matrix has a header, otherwise to ‘n’. If the matrix was read from a csv file, the new matrix will also
+# be printed to a csv file (as well as being returned as a matrix).
+sub add_seq_lengths_to_matrix_from_fasta
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$file_or_var, \$filename_or_matrixref, \$id_col, \$header_y_n, \$fasta_file)'\n\nwhere".
+	"\t\$file_or_var should be set to 'var' if the input is a reference to a matrix, or 'file' if the input is a csv file (and the output also should be)\n".
+	"\t\$filename_or_matrixref is either the name of the input csv file or a reference to the matrix to be processed\n".
+	"\t\$id_col is a numberr representing the column in the matrix that holds feature IDs. Numbering starts at 1 (i.e. not native perl indexing)\n".
+	"\t\$header_y_n - set this to 'y' if the input file/matrix has a header or 'n' if it doesn't\n".
+	"\t\$fasta_file is the fasta file from which lengths should be computed\n\n";
+	
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $file_or_var = shift @pars or die $usage;
+	my $matrix_file_or_ref = shift @pars or die $usage;
+	my $id_col = shift @pars or die $usage;
+	$id_col--;	# Converts this column index to perl native indexing (which starts at 0, which can't be used as a command line argument)
+	my $header_y_n = shift @pars or die $usage;
+	my $fasta = shift @pars or die $usage;
+	
+	my @matrix=();
+	if($file_or_var eq "file")	{	@matrix=fileTools::read_table($matrix_file_or_ref, "csv");	}
+	elsif($file_or_var eq "var")	{	@matrix = @{$matrix_file_or_ref};	}
+	else	{	die "\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Parameter \$file_or_var must be either 'file' or 'var'\n\n";	}
+	
+	# If there is a header, remove it from the matrix and store it in an array
+	my @header=();
+	if($header_y_n eq "y")
+		{
+		my $headerref = shift(@matrix);
+		@header = @{$headerref};
+		push(@header, "length");
+		}
+
+	# Get sequence lengths from fasta file
+	my @length_matrix=fastaTools::get_seq_lengths_from_fasta($fasta);
+		
+	# Loop over @matrix and get lenghts for the feature IDs in it
+	MAT: for(my $cc=0; $cc<=$#matrix; $cc++)
+		{
+		my @arr = @{$matrix[$cc]};
+		my $new_col = scalar(@arr);
+		my $id = $matrix[$cc][$id_col];	
+
+		# Loop over sequence lengths and find the length for the current geature ID
+		LEN: for(my $dd=0; $dd<=$#length_matrix; $dd++)
+			{
+			if($id eq $length_matrix[$dd][0])
+				{
+				$matrix[$cc][$new_col] = $length_matrix[$dd][1];
+				next MAT;
+				}
+			}
+		} 
+
+	# If the matrix had a header at the outset, add it back again
+	if($header_y_n eq "y")	{	unshift(@matrix, \@header);	}
+	
+	if($file_or_var eq "file")	{	fileTools::write_table(\@matrix, "csv", "ln_${matrix_file_or_ref}", "lin");	}
+	return(@matrix);
+	}
+
 return(1);
 
 # end functions
