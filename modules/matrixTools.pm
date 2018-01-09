@@ -1,22 +1,22 @@
 package matrixTools;
 
-# sub testprint_matrix(\@matrix)
-# sub transpose_matrix(\@matrix)
-# sub generate_rand_matrix($rows, $columns, $min, $max, $decimals)
-# sub create_zero_matrix($num_rows, $num_cols)
-# sub merge_matrices_col(\@matrix1)
-# sub split_matrix_on_col_value(\@matrix, $col_index)
-# sub get_matrix_columns_as_rows($matrixref, $col_index1, $col_index2...)
-# sub delete_matrix_columns($matrixref, $col_index1, $col_index2...)
-# sub add_length_to_matrix_gene_id($matrixref, $length_col_index, $header_y_n)
-# sub add_cols_to_matrix($matrixref, $col1_ref, $col2_ref etc...)
-# sub sync_genelists_on_sortkey($matrix1.csv, $sortkey1, $matrix2.csv, $sortkey2)
-# sub apply($matrixref, $row_or_col, $function)
-# sub dim($matrix_reference)
-# sub replace_matrix_cols(\@matrix, \@replacement_cols_matrix, $col_to_replace1, $col_to_replace2 etc...)
-# sub get_matrix_columns($matrix_reference, $col1, $col2 etc...)
-# sub matrix_equality($matrixref1, $matrixref2)
-# sub add_seq_lengths_to_matrix_from_fasta($file_or_var, $filename_or_matrixref, $header_y_n, $fasta_file)
+# testprint_matrix(\@matrix)
+# transpose_matrix(\@matrix)
+# generate_rand_matrix($rows, $columns, $min, $max, $decimals)
+# create_zero_matrix($num_rows, $num_cols)
+# merge_matrices_col(\@matrix1)
+# split_matrix_on_col_value(\@matrix, $col_index)
+# get_matrix_columns_as_rows($matrixref, $col_index1, $col_index2...)
+# delete_matrix_columns($matrixref, $col_index1, $col_index2...)
+# add_length_to_matrix_gene_id($matrixref, $length_col_index, $header_y_n)
+# add_cols_to_matrix($matrixref, $col1_ref, $col2_ref etc...)
+# sync_genelists_on_sortkey($matrix1.csv, $sortkey1, $matrix2.csv, $sortkey2)
+# apply($matrixref, $row_or_col, $function)
+# dim($matrix_reference)
+# replace_matrix_cols(\@matrix, \@replacement_cols_matrix, $col_to_replace1, $col_to_replace2 etc...)
+# get_matrix_columns($matrix_reference, $col1, $col2 etc...)
+# matrix_equality($matrixref1, $matrixref2)
+# add_seq_lengths_to_matrix_from_fasta($file_or_var, $filename_or_matrixref, $header_y_n, $fasta_file)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -68,6 +68,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -77,9 +80,12 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Prints a given matrix on screen
+
 sub testprint_matrix
 	{
+	# Prints a given matrix on screen
+	
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref)'\n\nwhere".
@@ -102,11 +108,14 @@ sub testprint_matrix
 		for(my $d=0; $d<=$#arr; $d++)	{	print("$arr[$d]\t");	}
 		print("\n");
 		}
-	}
+	} # end testprint_matrix
 
-# Transposes a given matrix (converts rows to columns and columns to rows)
+
 sub transpose_matrix
 	{
+	# Transposes a given matrix (converts rows to columns and columns to rows)
+	
+	
 	my $usage = "Syntax error for sub transpose_matrix. Correct usage: 'matrixTools::transpose_matrix(\@matrix)'\n";
 	my $matrix_ref = $_[0] or die $usage;
 	my @matrix = @{$matrix_ref};
@@ -126,11 +135,14 @@ sub transpose_matrix
 			}
 		}
 	return(@t_matrix);
-	}
+	} # end transpose_matrix
 
-# Generates a matrix with given dimensions, filled with random numbers between given values and with a given number of decimals
+
 sub generate_rand_matrix
 	{
+	# Generates a matrix with given dimensions, filled with random numbers between given values and with a given number of decimals
+	
+	
 	my $usage = "Syntax error for sub generate_rand_matrix. Correct usage: 'matrixTools::generate_rand_matrix(\$rows, \$columns, \$min, \$max, \$decimals);'\n";
 	my $rows = $_[0] or die $usage;
 	my $cols = $_[1] or die $usage;
@@ -147,14 +159,17 @@ sub generate_rand_matrix
 			}
 		}
 	return(@matrix);
-	}
+	} # end generate_rand_matrix
 
-# Creates a matrix with the specified numbers of rows and columns, filled with zeros
+
 sub create_zero_matrix
 	{
+	# Creates a matrix with the specified numbers of rows and columns, filled with zeros
+	
+	
 	my $usage="\nSyntax error for sub create_zero_matrix. Correct usage: 'matrixTools::create_zero_matrix(\$num_rows, \$num_cols)'\n\nwhere".
-        "\t\$num_rows is the desired number of rows\n".
-        "\t\$num_cols is the desired number of columns\n";
+	"\t\$num_rows is the desired number of rows\n".
+	"\t\$num_cols is the desired number of columns\n";
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)	{	$el = text::trim($el);	}
 	my $nrows = $pars[0] or die $usage;
@@ -172,14 +187,18 @@ sub create_zero_matrix
 		}
 
 	return(@matrix);
-	}
+	} # end create_zero_matrix
 
-# Merges two or more matrices (tables) in csv format into one. The function checks whether the same entry in the first column of one matrix has an
-# identical counterpart in the first column of the other matrices (this may for example be a gene id), and if so places all columns from all matrices
-# corresponding to that entry on the same row in the output matrix. Entries that don't have a value in a particular matrix will be assigned a value of "0"
-# for the respective column.
+
 sub merge_matrices_col
 	{
+	# Merges two or more matrices (tables) in csv format into one. The function checks whether the same entry in
+	# the first column of one matrix has an identical counterpart in the first column of the other matrices
+	# (this may for example be a gene id), and if so places all columns from all matrices corresponding to that
+	# entry on the same row in the output matrix. Entries that don't have a value in a particular matrix will
+	# be assigned a value of "0" for the respective column.
+
+
 	my $usage="\nSyntax error for sub merge_matrices_col. Correct usage: 'matrixTools::merge_matrices_col(\$header_y_n, \$outfile_name.csv, \$matrix_1.csv, \$matrix_2.csv, \$matrix_3.csv etc.)'\n\nwhere".
 	"\t\$header_y_n is an indicator of whether the infiles have headers or not. Options are 'y' and 'n'\n".
 	"\t\$outfile_name.csv is the desired name of the outfile\n".
@@ -260,24 +279,28 @@ sub merge_matrices_col
 	unshift(@grand_matrix, \@outfile_headers);
 	matrixTools::matrix_to_csv(\@grand_matrix, $outname);	
 	return(@grand_matrix);
-	}
+	} # end merge_matrices_col
 
 
-# Splits a matrix on rows to create a set of new matrices each representing the rows in the original matrix that have a unique value of the given column.
-# For example @submatrix_alma has all the rows from the original matrix that have the value "alma" in column number 3, and @submatrix_kalle those rows where
-# column 3 has a value of "kalle". Except for specifying the matrix name and the column number, also specify if the column has numeric ("num") or alphabetic ("alph") values
 sub split_matrix_on_col_value
 	{
+	# Splits a matrix on rows to create a set of new matrices each representing the rows in the original matrix that
+	# have a unique value of the given column. For example @submatrix_alma has all the rows from the original matrix
+	# that have the value "alma" in column number 3, and @submatrix_kalle those rows where column 3 has a value of
+	# "kalle". Except for specifying the matrix name and the column number, also specify if the column has numeric
+	# ("num") or alphabetic ("alph") values
+
+
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$num_or_alph, \$col_index)'\n\nwhere".
-        "\t\$matrixref is a reference to the matrix to be split\n".
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$num_or_alph, \$col_index)'\n\nwhere".
+	"\t\$matrixref is a reference to the matrix to be split\n".
 	"\t\$num_or_alph is an indicator of whether the column of interest holds numeric or alphabetic values (options: 'num' or 'alph')\n".
 	"\t\$col_index is the index of the column in the matrix that the splitting should be based on\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref = shift @pars or die $usage;
 	my $num_or_alph = shift @pars or die $usage;
 	my $col = shift @pars or 0;
 	my @matrix=@{$matrixref};
@@ -319,47 +342,53 @@ sub split_matrix_on_col_value
 			}
 		}
 	
-        return(@matrix_set);
-	}
+	return(@matrix_set);
+	} # end split_matrix_on_col_value
 
-# Prints a given 3d matrix on the screen (given a reference to it)
+
 sub testprint_3d_matrix
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$3d_matrixref)'\n\nwhere".
-        "\t\$3d_matrixref is a reference to the 3d matrix to be printed\n\n";
+	# Prints a given 3d matrix on the screen (given a reference to it)
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$3d_matrixref)'\n\nwhere".
+	"\t\$3d_matrixref is a reference to the 3d matrix to be printed\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matrixref_3d = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matrixref_3d = shift @pars or die $usage;
 	
 	my @matrix_3d = @{$matrixref_3d};
 
-        for(my $cc=0; $cc<=$#matrix_3d; $cc++)
-                {
-                print("This is matrix number ${cc}:\n\n");
-                my @matrix_2d = @{$matrix_3d[$cc]};
+	for(my $cc=0; $cc<=$#matrix_3d; $cc++)
+		{
+		print("This is matrix number ${cc}:\n\n");
+		my @matrix_2d = @{$matrix_3d[$cc]};
 
-                for(my $dd=0; $dd<=$#matrix_2d; $dd++)
-                        {
-                        my @arr = @{$matrix_2d[$dd]};
+		for(my $dd=0; $dd<=$#matrix_2d; $dd++)
+				{
+				my @arr = @{$matrix_2d[$dd]};
 
-                        for(my $ee=0; $ee<=$#arr; $ee++)
-                                {
-                                print("$arr[$ee]\t");
-                                }
-                        print("\n");
-                        }
-                print("---------------------------------------------\n");
+				for(my $ee=0; $ee<=$#arr; $ee++)
+						{
+						print("$arr[$ee]\t");
+						}
+				print("\n");
+				}
+		print("---------------------------------------------\n");
 		}
-	}
+	} # end testprint_3d_matrix
 
-# Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those columns in the matrix. If one column is requested,
-# the function returns it as an array. If more columns are requested, they are returned as a matrix where each row is a reference to an array holding
-# a specific column. The first column is called 1, the second 2 etc (i.e. not standard perl indexing).
+
 sub get_matrix_columns_as_rows
 	{
+	# Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those columns
+	# in the matrix. If one column is requested, the function returns it as an array. If more columns are requested,
+	# they are returned as a matrix where each row is a reference to an array holding a specific column. The first
+	# column is called 1, the second 2 etc (i.e. not standard perl indexing).
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
@@ -395,11 +424,14 @@ sub get_matrix_columns_as_rows
 
 	if($num_cols>1)	{	return(@all);	}
 	elsif($num_cols==1) {       return(@one);   }
-	}
+	} # end get_matrix_columns_as_rows
 
-# Deletes specified columns from a matrix. NB! The first column in a matrix is called 1 rather than 0 (i.e. not perl native indexing).
+
 sub delete_matrix_columns
 	{
+	# Deletes specified columns from a matrix. NB! The first column in a matrix is called 1 rather than 0
+	# (i.e. not perl native indexing).
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$col_index1, \$col_index2 etc)'\n\nwhere".
@@ -435,11 +467,14 @@ sub delete_matrix_columns
 		}
 
 	return(@new_matrix);
-	}
+	} # end delete_matrix_columns
 
-# Takes a gene expression with a gene length column and adds the length information to the ID/name column of every gene, e.g. "Etteplan_B" becomes "Etteplan_B_1_237"
+
 sub add_length_to_matrix_gene_id
 	{
+	# Takes a gene expression with a gene length column and adds the length information to the ID/name column
+	# of every gene, e.g. "Etteplan_B" becomes "Etteplan_B_1_237"
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$length_col_index, \$header_y_n)'\n\nwhere".
@@ -467,11 +502,13 @@ sub add_length_to_matrix_gene_id
 		}
 
 	return(@matrix);
-	}
+	} # end add_length_to_matrix_gene_id
 
-# Adds one or more columns to a matrix. The new columns are specified as array references.
+
 sub add_cols_to_matrix
 	{
+	# Adds one or more columns to a matrix. The new columns are specified as array references.
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$colref_1, \$colref_2 etc...)'\n\nwhere".
@@ -504,13 +541,17 @@ sub add_cols_to_matrix
 	my @new_matrix=matrixTools::transpose_matrix(\@t_matrix);
 		
 	return(@new_matrix);	
-	}
+	} # end add_cols_to_matrix
 
-# Takes two genelists and removes any genes that are only present in one of them, i.e. it retains those genes that are common to the two lists
-# (i.e. it produces the intersection of the lists, but doesn’t join them – it outputs two new lists). For this to be possible, the lists need
-# to use the same type of gene identifiers, and the column number of these identifiers are given as arguments at the command line.
+
 sub sync_genelists_on_sortkey
 	{
+	# Takes two genelists and removes any genes that are only present in one of them, i.e. it retains
+	# those genes that are common to the two lists (i.e. it produces the intersection of the lists,
+	# but doesn’t join them – it outputs two new lists). For this to be possible, the lists need
+	# to use the same type of gene identifiers, and the column number of these identifiers are given
+	# as arguments at the command line.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix1.csv, \$sortkey1, \$matrix2.csv, \$sortkey2)'\n\nwhere".
@@ -573,12 +614,14 @@ sub sync_genelists_on_sortkey
 	# Write new matrices to files
 	fileTools::write_table(\@new_matrix1, "csv", $outname_1, "lin");
 	fileTools::write_table(\@new_matrix2, "csv", $outname_2, "lin");
-	}
+	} # end sync_genelists_on_sortkey
 
-# Applies a function (mean, median, min, max) to all rows ($row_or_col=”row”) or columns ($row_or_col=”col”)
-# in a matrix and returns the resulting values as an array.
+
 sub apply
 	{
+	# Applies a function (mean, median, min, max) to all rows ($row_or_col=”row”) or columns ($row_or_col=”col”)
+	# in a matrix and returns the resulting values as an array.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$row_or_col, \$function)'\n\nwhere".
@@ -616,11 +659,13 @@ sub apply
 		}
 		
 	return(@aggregate_values);
-	}
+	} # end apply
 
-# Returns the number of rows and columns of a matrix (given as a matrix reference), as an array. 
+ 
 sub dim
 	{
+	# Returns the number of rows and columns of a matrix (given as a matrix reference), as an array.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref)'\n\nwhere".
@@ -639,12 +684,16 @@ sub dim
 	my @dimensions = ($num_rows, $num_cols);
 	
 	return(@dimensions);
-	}
+	} # end dim
 	
-# Takes a matrix and a range of rows and columns and replaces that range (chunk) with another specified marix (of those dimensions).
-# Specify the range to be replaced as “1_4_to_3_7” (replace the chuck starting at row 1, column 4 and ending at row 3, column 7).
+
 sub replace_matrix_chunk
 	{
+	# Takes a matrix and a range of rows and columns and replaces that range (chunk) with another specified
+	# matrix (of those dimensions). Specify the range to be replaced as “1_4_to_3_7” (replace the chuck starting
+	# at row 1, column 4 and ending at row 3, column 7).
+	
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$argument1, \$argument2, \@arguments3)'\n\nwhere".
@@ -688,12 +737,16 @@ sub replace_matrix_chunk
 		}
 	
 	return(@matrix);
-	}
+	} # end replace_matrix_chunk
 
-# Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those columns in the matrix. They are returned as a matrix.
-# Note that more columns than one must be requested (otherwise use subroutine ‘get_matrix_columns_as_rows’). Column numbering begins at 1 rather than 0.
+
 sub get_matrix_columns
 	{
+	# Retrieves specific columns (one or many) from a matrix, specified by the index (number) of those
+	# columns in the matrix. They are returned as a matrix. Note that more columns than one must be
+	# requested (otherwise use subroutine ‘get_matrix_columns_as_rows’). Column numbering begins at
+	# 1 rather than 0.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference, \$column_index1, \@column_index2 etc...)'\n\nwhere".
@@ -711,12 +764,14 @@ sub get_matrix_columns
 	my @transposed_matrix=matrixTools::transpose_matrix(\@matrix_rows);
 
 	return(@transposed_matrix);
-	}
+	} # end get_matrix_columns
 	
-	
-# Checks whether two matrices (specified as matrix references) are equal, and returns “y” if they are and “n” if they aren’t.
+
 sub matrix_equality
 	{
+	# Checks whether two matrices (specified as matrix references) are equal, and returns “y”
+	# if they are and “n” if they aren’t.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference1, \$matrix_reference2)'\n\nwhere".
@@ -755,16 +810,19 @@ sub matrix_equality
 
 	else	{	die "\n\tEquality of matrices couldn't be evalueated because of an internal error\n";	}
 	return($matrices_equal);
-	}
+	} # end matrix_equality
 
-# Takes a matrix (as a csv file – set $file_or_var to ‘file’ - or matrix reference – set $file_or_var to ‘var’ - where
-# each row represents a genomic feature (e.g. a gene or transcript and a specified column is a feature ID)) and a fasta
-# file containing the DNA/RNA/protein sequence of the features in the matrix. Using the fasta file the subroutine computes
-# the length of each feature in the matrix, and attaches these lengths to the matrix as a new column. Set $header_y_n to ‘y’
-# if the original matrix has a header, otherwise to ‘n’. If the matrix was read from a csv file, the new matrix will also
-# be printed to a csv file (as well as being returned as a matrix).
+
 sub add_seq_lengths_to_matrix_from_fasta
 	{
+	# Takes a matrix (as a csv file – set $file_or_var to ‘file’ - or matrix reference – set $file_or_var to ‘var’ - where
+	# each row represents a genomic feature (e.g. a gene or transcript and a specified column is a feature ID)) and a fasta
+	# file containing the DNA/RNA/protein sequence of the features in the matrix. Using the fasta file the subroutine computes
+	# the length of each feature in the matrix, and attaches these lengths to the matrix as a new column. Set $header_y_n to ‘y’
+	# if the original matrix has a header, otherwise to ‘n’. If the matrix was read from a csv file, the new matrix will also
+	# be printed to a csv file (as well as being returned as a matrix).
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$file_or_var, \$filename_or_matrixref, \$id_col, \$header_y_n, \$fasta_file)'\n\nwhere".
@@ -823,7 +881,8 @@ sub add_seq_lengths_to_matrix_from_fasta
 	
 	if($file_or_var eq "file")	{	fileTools::write_table(\@matrix, "csv", "ln_${matrix_file_or_ref}", "lin");	}
 	return(@matrix);
-	}
+	} # end add_seq_lengths_to_matrix_from_fasta
+
 
 return(1);
 

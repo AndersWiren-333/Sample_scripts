@@ -1,8 +1,8 @@
 package fastqTools;
 
-# sub read_fastq($file.fastq)
-# sub print_fastq($matrixref)
-# sub count_reads_fastq($infile.fastq)
+# read_fastq($file.fastq)
+# print_fastq($matrixref)
+# count_reads_fastq($infile.fastq)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -54,6 +54,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -63,78 +66,87 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Reads a given fastq file into a matrix (one row = one sequence, four columns per row)
 sub read_fastq
-        {
+	{
+	# Reads a given fastq file into a matrix (one row = one sequence, four columns per row)
+	
+	
 	my $subname = "read_fastq";
-        my $usage="\nSyntax error for sub ${subname}. Correct usage: '\${packname}::\${subname}(\$infile.fastq)'\n\nwhere".
-        "\t\$infile.fastq is the input file, in fastq format\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars;
+	my $usage="\nSyntax error for sub ${subname}. Correct usage: '\${packname}::\${subname}(\$infile.fastq)'\n\nwhere".
+	"\t\$infile.fastq is the input file, in fastq format\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars;
 	
 	# Open file
 	open(my $in, "<", $infile) or die "sub $subname couldn't open infile $infile\n";
 
-        #if(!open($in, "<", $infile))   {       die "sub $subname couldn't open infile $infile\n";    }
-        my @matrix=();
-        my @temp=();
-        my $counter=0;
-        while(my $line = <$in>)
-                {
-                $counter++;
-                $line = text::trim($line);
-                push(@temp, $line);
-                if($counter==4)                         # If this is the last line of a sequence record...
-                        {
-                        push(@matrix, [@temp]);         # Add the four lines of the record as an element (a line of) to @one matrix
-                        @temp=();                                       # Free the @temp array
-                        $counter=0;                             # Reset the counter
-                        }
-                }
-	close($in);
-        return(@matrix);
-        }
+	#if(!open($in, "<", $infile))   {       die "sub $subname couldn't open infile $infile\n";    }
+	my @matrix=();
+	my @temp=();
+	my $counter=0;
+	while(my $line = <$in>)
+		{
+		$counter++;
+		$line = text::trim($line);
+		push(@temp, $line);
+		if($counter==4)                         # If this is the last line of a sequence record...
+			{
+			push(@matrix, [@temp]);         # Add the four lines of the record as an element (a line of) to @one matrix
+			@temp=();                                       # Free the @temp array
+			$counter=0;                             # Reset the counter
+			}
+		}
 
-# Prints a given fastq matrix (one row = one sequence, four columns per row) to a file with the specified name
+	close($in);
+	return(@matrix);
+	} # end read_fastq
+
+
 sub print_fastq
 	{
+	# Prints a given fastq matrix (one row = one sequence, four columns per row) to a file with the specified name
+	
+	
 	# Set error messages and accept input parameters
-        my $subname = "print_fastq";
-        my $usage="\nSyntax error for sub ${subname}. Correct usage: '\${packname}::\${subname}(\$matrixref, \$outname)'\n\nwhere".
-        "\t\$matrixref is a reference to a matrix holding fastq reads (one row = one read, each row has four columns)\n".
+	my $subname = "print_fastq";
+	my $usage="\nSyntax error for sub ${subname}. Correct usage: '\${packname}::\${subname}(\$matrixref, \$outname)'\n\nwhere".
+	"\t\$matrixref is a reference to a matrix holding fastq reads (one row = one read, each row has four columns)\n".
 	"\t\$outname is the deired name of the fastq outfile\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $matrix_ref = shift(@pars) or die $usage;
-        my $outname = shift(@pars) or die $usage;
+	my $outname = shift(@pars) or die $usage;
 
 	# Start doing things
-        my @matrix = @{$matrix_ref};
+	my @matrix = @{$matrix_ref};
 	open(my $out, ">>", $outname) or die "sub $subname couldn't create outfile $outname\n";
 
-        for(my $c=0; $c<=$#matrix; $c++)
-                {
-                my @arr=@{$matrix[$c]};
-                foreach my $el (@arr)
+	for(my $c=0; $c<=$#matrix; $c++)
+		{
+		my @arr=@{$matrix[$c]};
+		foreach my $el (@arr)
 			{
 			$el = text::trim($el);
 			print($out "$el\n");
 			}
-                }
-        close($out);
-	}
+		}
+	close($out);
+	} # end print_fastq
 
-# Counts the number of sequence reads in a fastq file and returns the number.
+
 sub count_reads_fastq
 	{
+	# Counts the number of sequence reads in a fastq file and returns the number.
+	
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fastq)'\n\nwhere".
-        "\t\$infile.fastq is the file to have its reads counted\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fastq)'\n\nwhere".
+	"\t\$infile.fastq is the file to have its reads counted\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	open(my $in, "<", $infile) or die "Sub $subname could't open infile $infile\n";
 
 	my $lines=0;
@@ -149,7 +161,8 @@ sub count_reads_fastq
 		die "Subroutine $subname finds that the number of lines in fastq file $infile is not evenly divisible with 4. This indicates there is something wrong with the formatting of the file\n";
 		}
         return($seqs);
-	}
+	} # count_reads_fastq
+
 
 return(1);
 

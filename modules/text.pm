@@ -1,12 +1,12 @@
 package text;
 
-# sub trim($string)
-# sub linebreaks($file, $desired_linebreaks)
-# sub parse_path($path)
-# sub read_sample_list($sample_names)
-# sub split_file($infile.txt, $lines_per_piece)
-# sub concat_files($outname, $file1, $file2, $file3)
-# sub remove_spaces_from_csv($infile.csv)
+# trim($string)
+# linebreaks($file, $desired_linebreaks)
+# parse_path($path)
+# read_sample_list($sample_names)
+# split_file($infile.txt, $lines_per_piece)
+# concat_files($outname, $file1, $file2, $file3)
+# remove_spaces_from_csv($infile.csv)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -58,6 +58,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -67,31 +70,34 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Removes whitespace from the ends of a given string, as well as all sorts of linebreaks from anywhere in the string
-# Parameters: $string
+
 sub trim
 	{
+	# Removes whitespace from the ends of a given string, as well as all sorts of linebreaks from anywhere in the string
+	# Parameters: $string
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$textstring)'\n\nwhere".
 	"\t\$textstring is the string of text that should be trimmed\n\n";
 	my $string = shift or 0;
 
-	$string =~ s/\r+//;
-	$string =~ s/\n+//;
+	chomp($string);
 	$string =~ s/^\s+//m;
 	$string =~ s/\s+$//m;
 	return($string);
-	}
+	} # end trim
 
-# Replaces all linebreaks in a file with the type of linebreaks ('win' for Windows, 'lin' for Linux/Unix) you specify
-# Parameters: $infile, $breakstyle (breakstyle = win or lin)
+	
 sub linebreaks
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$desired_linebreaks)'\n\nwhere".
-        "\t\$textstring is the string of text that should be trimmed\n".
+	# Replaces all linebreaks in a file with the type of linebreaks ('win' for Windows, 'lin' for Linux/Unix) you specify
+	# Parameters: $infile, $breakstyle (breakstyle = win or lin)
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$desired_linebreaks)'\n\nwhere".
+	"\t\$textstring is the string of text that should be trimmed\n".
 	"\t\$desired_linebreaks can be either 'win' for windows or 'lin' for linux/unix\n\n";
 
 	my $file = $_[0] or die $usage;
@@ -116,17 +122,19 @@ sub linebreaks
 	close($in);
 	close($out);
 	return($outname);
-	}
+	} # end linebreaks
 
-# Gets the directory name, filename, file basename and file suffix of a path
+	
 sub parse_path
 	{
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$path)'\n\nwhere".
-        "\t\$path is a path\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $path = shift @pars or die $usage;
+	# Gets the directory name, filename, file basename and file suffix of a path
+	
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$path)'\n\nwhere".
+	"\t\$path is a path\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $path = shift @pars or die $usage;
 
 	my @parts = split("/", $path);
 	my $file = pop(@parts);
@@ -136,30 +144,32 @@ sub parse_path
 	my $basename = join(".", @fileparts);
 	
 	my @outarr = ($dir, $file, $basename, $suffix);
-        return(@outarr);
-	}
+	return(@outarr);
+	} # end parse_path
 
-# Reads a list of sample names into a matrix of sample group names. The sample name file must have the format 'samplename,group', e.g.
-#
-#	sample1,groupA
-#	sample2,groupA
-#	sample3,groupB
-#	sample4,groupB
-#
-# The matrix that is returned has the format 'group,sample_index1,sample_index2,sample_index3', e.g.
-#
-#	groupA,0,1
-#	groupB,2,3
+	
 sub read_sample_list
 	{
+	# Reads a list of sample names into a matrix of sample group names. The sample name file must have the format 'samplename,group', e.g.
+	#
+	#	sample1,groupA
+	#	sample2,groupA
+	#	sample3,groupB
+	#	sample4,groupB
+	#
+	# The matrix that is returned has the format 'group,sample_index1,sample_index2,sample_index3', e.g.
+	#
+	#	groupA,0,1
+	#	groupB,2,3
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$sample_list.txt)'\n\nwhere".
-        "\t\$sample_list.txt is a plain text file with, on each line, the name of a sample followed by a comma and the name of the group to which that sample belongs, i.e.\n\n".
-        "\t\tsample1,groupA\n\t\tsample2,groupA\n\t\tsample3,groupB\n\t\tsample4,groupB\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $namefile = shift @pars or die $usage;
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$sample_list.txt)'\n\nwhere".
+	"\t\$sample_list.txt is a plain text file with, on each line, the name of a sample followed by a comma and the name of the group to which that sample belongs, i.e.\n\n".
+	"\t\tsample1,groupA\n\t\tsample2,groupA\n\t\tsample3,groupB\n\t\tsample4,groupB\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $namefile = shift @pars or die $usage;
 
 	my $inmatrix_ref=(misc::file_to_matrix($namefile, "comma", "n"))[0];
 	my @inmatrix=@{$inmatrix_ref};
@@ -196,25 +206,27 @@ sub read_sample_list
 			}
 		}
 	return(@outmatrix);
-	}
+	} # end read_sample_list
 
-# Splits a given data file into a number of pieces with a given number of lines in each, and returns a reference to an array holding the part names, and a scalar corresponding to the
-# number of parts created. The last piece may have a smaller number. NB! If you want to split a fasta or fastq file you should not use this script.
-# NB! If you want to split a fasta or fastq file you should not use this script.
+
 sub split_file
 	{
+	# Splits a given data file into a number of pieces with a given number of lines in each, and returns a reference to an array holding the part names, and a scalar corresponding to the
+	# number of parts created. The last piece may have a smaller number. NB! If you want to split a fasta or fastq file you should not use this script.
+	# NB! If you want to split a fasta or fastq file you should not use this script.
+
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.txt, \$lines_per_piece)'\n\nwhere".
-        "\t\$infile.txt is the file that should be split\n".
-        "\t\$lines_per_piece is the maximum number of lines in each outfile\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.txt, \$lines_per_piece)'\n\nwhere".
+	"\t\$infile.txt is the file that should be split\n".
+	"\t\$lines_per_piece is the maximum number of lines in each outfile\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $lines_per_file = shift @pars or die $usage;	
 
 	my $partnum=1;
-        open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
+	open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
 
 	my @partnames=();
 	my $outname = "$infile"."_part_${partnum}";
@@ -238,22 +250,25 @@ sub split_file
 			}
 		$linenum++;
 		}
-        close($in);
-        close($out);
+		
+	close($in);
+	close($out);
 	my @results=(\@partnames, $partnum);
-        return(@results);
-	}
+	return(@results);
+	} # end split_file
 
-# Concatenates a series of data files.
+
 sub concat_files
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$outname, \$file1, \$file2, \$file3 etc...)'\n\nwhere".
-        "\t\$outname is the desired name of the resulting concatnated file\n".
-        "\t\$file1, \$file2 etc are the files to be concatenated\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
+	# Concatenates a series of data files
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$outname, \$file1, \$file2, \$file3 etc...)'\n\nwhere".
+	"\t\$outname is the desired name of the resulting concatnated file\n".
+	"\t\$file1, \$file2 etc are the files to be concatenated\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $outname = shift(@pars) or die $usage;
 
 	open(my $out, ">>", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
@@ -267,22 +282,24 @@ sub concat_files
 		unlink($file);	# This operation doesn't work for some reason (unlink is a built in function and usually works in this sort of context)
 		}
 	close($out);
-	}
+	} # end concat_files
 
-# Removes unwanted blank spaces from csv files
+
 sub remove_spaces_from_csv
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.csv)'\n\nwhere".
-        "\t\$infile.csv is the infile to be cleaned\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	# Removes unwanted blank spaces from csv files
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.csv)'\n\nwhere".
+	"\t\$infile.csv is the infile to be cleaned\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $outname = "t_".$infile;
 
-        open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
-        open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
+	open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
+	open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
 
 	# Loop over lines in the infile
 	while(my $line = <$in>)
@@ -294,12 +311,13 @@ sub remove_spaces_from_csv
 		print($out "$outline\n");
 		}
 	
-        close($in);
-        close($out);
+	close($in);
+	close($out);
 	unlink($infile);
 	move($outname, $infile)	
-	}
+	} # end remove_spaces_from_csv
 	
+
 return(1);
 
 # end functions

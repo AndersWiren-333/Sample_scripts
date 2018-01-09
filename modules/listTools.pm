@@ -1,7 +1,7 @@
 package listTools;
 
-# sub array_equality($arrayref1, $arrayref2)
-# sub get_closest_values($value)
+# array_equality($arrayref1, $arrayref2)
+# get_closest_values($value)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -53,6 +53,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -62,9 +65,12 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Checks whether two arrays (specified as array references) are equal, and returns “y” if they are and “n” if they aren’t.
+
 sub array_equality
-	{
+	{# Checks whether two arrays (specified as array references) are equal, and returns “y” if they are
+	# and “n” if they aren’t.
+	
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference1, \$array_reference2)'\n\nwhere".
@@ -104,14 +110,17 @@ sub array_equality
 		}
 
 	return($equal);
-	}
+	} # end array_equality
 
-# This subroutine checks whether a specific numeric value is present in an array, and if it isn’t it returns the next lowest value
-# and the next highest value in the same array. If the value is present, both the next lowest and highest values are returned as
-# the value itself. If the value is lower than the lowest value in the array, the return values are “” and the smallest value in
-# the array. If the value is larger than the largest value in the array, the return values are the largest value in the array and “”.
+
 sub get_closest_values
 	{
+	# This subroutine checks whether a specific numeric value is present in an array, and if it isn’t it returns the next lowest value
+	# and the next highest value in the same array. If the value is present, both the next lowest and highest values are returned as
+	# the value itself. If the value is lower than the lowest value in the array, the return values are “” and the smallest value in
+	# the array. If the value is larger than the largest value in the array, the return values are the largest value in the array and “”.
+	
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_ref, \$value)'\n\nwhere".
@@ -160,11 +169,16 @@ sub get_closest_values
 			}
 		}
 	return($low, $high);
-	}
+	} # end get_closest_values
 
-# Description of what the function does and how to use it
+
 sub get_array_value_index
 	{
+	# Checks whether a value is present in an array (specified as an array reference) and if it is,
+	# returns the position (index) of that value in the array (0 is the first element in an array).
+	# If the value isn’t present, the subrroutine returns “not_available”.
+
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$num_or_char, \$value)'\n\nwhere".
@@ -189,16 +203,19 @@ sub get_array_value_index
 		}
 	
 	return($index);
-	}	
+	} # end get_array_value_index
 
-# This subroutine checks whether a specific numeric value is present in an array, and if it isn’t it returns the
-# index of the next lowest value and the index of the next highest value in the same array. If the value is present,
-# both the next lowest and highest indices are returned as the index of the value itself. If the value is lower than
-# the lowest value in the array, the return values are “” and the index of the smallest value in the array. If the
-# value is larger than the largest value in the array, the return values are the index of the largest value in the
-# array and “”.
+
 sub get_closest_indices
 	{
+	# This subroutine checks whether a specific numeric value is present in an array, and if it isn’t it returns the
+	# index of the next lowest value and the index of the next highest value in the same array. If the value is present,
+	# both the next lowest and highest indices are returned as the index of the value itself. If the value is lower than
+	# the lowest value in the array, the return values are “” and the index of the smallest value in the array. If the
+	# value is larger than the largest value in the array, the return values are the index of the largest value in the
+	# array and “”.
+	
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_ref, \$value)'\n\nwhere".
@@ -260,7 +277,9 @@ sub get_closest_indices
 			}
 		}
 	return($low_rank, $high_rank);
-	}	
+	} # end get_closest_indices
+
+
 return(1);
 
 # end functions

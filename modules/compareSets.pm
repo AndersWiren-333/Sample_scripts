@@ -1,8 +1,8 @@
 package compareSets;
 
-# sub check_range_overlap($on_end_overlap_y_n, $startA, $stopA, $startB, $stopB)
-# sub merge_overlap_range($array_reference, $strict_overlap_y_n, $log_y_n);
-# sub check_range_lists_overlap($array_reference_1, $array_reference_2)
+# check_range_overlap($on_end_overlap_y_n, $startA, $stopA, $startB, $stopB)
+# merge_overlap_range($array_reference, $strict_overlap_y_n, $log_y_n);
+# check_range_lists_overlap($array_reference_1, $array_reference_2)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -54,6 +54,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -63,10 +66,14 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Checks if two ranges, A and B, overlap each other. Example: A=19-35, B=30-40. A overlaps B and extends it to the left. You can choose whether to define adjacence as overlap (A and B are 'end on end')
-# or if you require strict overlap (parameter 'strict_overlap_y_n' is set to 'n' and 'y' respectively)
+
 sub check_range_overlap
 	{
+	# Checks if two ranges, A and B, overlap each other. Example: A=19-35, B=30-40. A overlaps B and extends it to the left.
+	# You can choose whether to define adjacence as overlap (A and B are 'end on end') or if you require strict overlap
+	# (parameter 'strict_overlap_y_n' is set to 'n' and 'y' respectively)
+
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$startA, \$stopA, \$startB, \$stopB)'\n\nwhere".
@@ -117,13 +124,16 @@ sub check_range_overlap
 	elsif($startA > $stopB_adj)	{	$result = "A_after_B";	}
 
 	return($result);
-	}
+	} # end check_range_overlap
 
-# Takes (a reference to) and array of ranges in the format "123_456" and checks whether any of the ranges overlap each other.
-# If so it merges those ranges. The updated list of ranges (with some merged) is then returned. Optionally, a log file can be
-# written (option $log_y_n = "y"), e.g. for debugging purposes.
+
 sub merge_overlap_range
 	{
+	# Takes (a reference to) and array of ranges in the format "123_456" and checks whether any of the ranges overlap each other.
+	# If so it merges those ranges. The updated list of ranges (with some merged) is then returned. Optionally, a log file can be
+	# written (option $log_y_n = "y"), e.g. for debugging purposes.
+
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$strict_overlap_y_n, \$log_y_n)'\n\nwhere".
@@ -254,14 +264,18 @@ sub merge_overlap_range
 	close($log);
 	if($log_y_n eq "n")	{	unlink("log_merge_overlapping_ranges_${timestamp}.txt");		}
 	return(@new_arr);
-	}
+	} # end merge_overlap_range
 
-# Takes two lists (arrays) each containing elements that each have a specific location along a discrete scale (the steps are whole numbers, 1,2,3,4...).
-# Determines which elements in list A that overlap elements in list B. Creates two outfiles: one containing the elements from list A that overlap
-# elements in list B and one with the ones that don't. This function is useful for determining e.g. which assembled transcripts overlap previously annotated
-# genes, if their locations on a chromosome/contig is known.
+
 # sub check_feature_lists_overlap
 	# {
+	# Takes two lists (arrays) each containing elements that each have a specific location along a discrete
+	# scale (the steps are whole numbers, 1,2,3,4...). Determines which elements in list A that overlap elements
+	# in list B. Creates two outfiles: one containing the elements from list A that overlap elements in list B
+	# and one with the ones that don't. This function is useful for determining e.g. which assembled transcripts
+	# overlap previously annotated genes, if their locations on a chromosome/contig is known.
+
+
 	# # Set error messages and accept input parameters
 	# my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	# my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$strict_overlap_y_n, \$listA_array_ref, \$listB_array_ref)'\n\nwhere".
@@ -284,7 +298,8 @@ sub merge_overlap_range
 
 
 
-	# }
+	# } # end check_feature_lists_overlap
+
 
 return(1);
 

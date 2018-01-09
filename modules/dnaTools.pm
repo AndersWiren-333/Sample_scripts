@@ -1,7 +1,7 @@
 package dnaTools;
 
-# sub get_revcomp($sequence)
-# sub get_comp($sequence)
+# get_revcomp($sequence)
+# get_comp($sequence)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -53,6 +53,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -62,51 +65,53 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Constructs the reverse complement of a DNA or RNA sequence, with ambiguity codes.
+
 sub get_revcomp
-        {
+	{
+	# Constructs the reverse complement of a DNA or RNA sequence, with ambiguity codes.
 	my $usage = "Syntax error for sub get_revcomp. Correct usage: 'dnaTools::get_revcomp(\$sequence);'\n";
-        my $seq = $_[0] or die $usage;
-        my $last=(length($seq))-1;
-        my @seqarr = split("", $seq);
-        my @new_arr=();
+	my $seq = $_[0] or die $usage;
+	my $last=(length($seq))-1;
+	my @seqarr = split("", $seq);
+	my @new_arr=();
 
 	# Loop backwards over nucleotides in input sequence
-        for(my $cc=$last; $cc>=0; $cc--)
-                {
-                my $nuc=$seqarr[$cc];
-                my $new_nuc="";
-                if($nuc eq "A") {	$new_nuc = "T"; }
-                elsif($nuc eq "C") {	$new_nuc = "G"; }
-                elsif($nuc eq "G") {	$new_nuc = "C"; }
-                elsif($nuc eq "T") {	$new_nuc = "A"; }
+	for(my $cc=$last; $cc>=0; $cc--)
+		{
+		my $nuc=$seqarr[$cc];
+		my $new_nuc="";
+		if($nuc eq "A") {	$new_nuc = "T"; }
+		elsif($nuc eq "C") {	$new_nuc = "G"; }
+		elsif($nuc eq "G") {	$new_nuc = "C"; }
+		elsif($nuc eq "T") {	$new_nuc = "A"; }
 		elsif($nuc eq "U") {	$new_nuc = "A"; }
-                elsif($nuc eq "N") {	$new_nuc = "N"; }
-                elsif($nuc eq "-") {	$new_nuc = "-"; }
+		elsif($nuc eq "N") {	$new_nuc = "N"; }
+		elsif($nuc eq "-") {	$new_nuc = "-"; }
 
-                elsif($nuc eq "M")	{	$new_nuc = "K"; }
-                elsif($nuc eq "R")	{	$new_nuc = "Y"; }
-                elsif($nuc eq "W")	{	$new_nuc = "W"; }
-                elsif($nuc eq "S")	{	$new_nuc = "S"; }
-                elsif($nuc eq "Y")	{	$new_nuc = "R"; }
-                elsif($nuc eq "K")	{	$new_nuc = "M"; }
+		elsif($nuc eq "M")	{	$new_nuc = "K"; }
+		elsif($nuc eq "R")	{	$new_nuc = "Y"; }
+		elsif($nuc eq "W")	{	$new_nuc = "W"; }
+		elsif($nuc eq "S")	{	$new_nuc = "S"; }
+		elsif($nuc eq "Y")	{	$new_nuc = "R"; }
+		elsif($nuc eq "K")	{	$new_nuc = "M"; }
 
 		elsif($nuc eq "B")	{	$new_nuc = "V";	}
 		elsif($nuc eq "D")	{	$new_nuc = "H";	}
 		elsif($nuc eq "H")	{	$new_nuc = "D";	}
 		elsif($nuc eq "V")	{	$new_nuc = "B";	}
-				
-                push(@new_arr, $new_nuc);
-                }
-        my $new_seq = join("", @new_arr);
-        return($new_seq);
-        }
+		
+		push(@new_arr, $new_nuc);
+		}
+	my $new_seq = join("", @new_arr);
+	return($new_seq);
+	} # end get_revcomp
 
 
-# Constructs the complement of a DNA or RNA sequence, with ambiguity codes.
-# Parameters: $sequence
 sub get_comp
 	{
+	# Constructs the complement of a DNA or RNA sequence, with ambiguity codes.
+	# Parameters: $sequence
+
 	my $usage = "Syntax error for sub get_comp. Correct usage: 'dnaTools::get_comp(\$sequence);'\n";
 	my $seq = $_[0] or die $usage;
 	my @seqarr = split("", $seq);
@@ -141,7 +146,8 @@ sub get_comp
 		}
 	my $new_seq = join("", @new_arr);
 	return($new_seq);
-	}
+	} # end get_comp
+
 
 return(1);
 

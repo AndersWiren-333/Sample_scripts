@@ -1,15 +1,15 @@
 package fileTools;
 
-# sub read_table($infile, $filetype)
-# sub write_table($matrix_ref, $filetype, $outname)
-# sub convert_table($infile, $infile_type, $outfile_type, $outfile_linebreaks_lin_win)
-# sub write_list($array_ref, $filetype, $outname, $linebreaks)
-# sub delete_table_columns($filename, $filetype, $col_index1, $col_index2 etc.)
-# sub concat_PE($file1, $file2, $pattern)
-# sub write_table_as_list($matrixref, $outname)
-# sub trim_trinity_ID_patman($infile.pat, $outname)
-# sub remove_multimatch_from_trinity_patman($infile.pat, $outname)
-# sub read_diff_expr_sample_list($group_file)
+# read_table($infile, $filetype)
+# write_table($matrix_ref, $filetype, $outname)
+# convert_table($infile, $infile_type, $outfile_type, $outfile_linebreaks_lin_win)
+# write_list($array_ref, $filetype, $outname, $linebreaks)
+# delete_table_columns($filename, $filetype, $col_index1, $col_index2 etc.)
+# concat_PE($file1, $file2, $pattern)
+# write_table_as_list($matrixref, $outname)
+# trim_trinity_ID_patman($infile.pat, $outname)
+# remove_multimatch_from_trinity_patman($infile.pat, $outname)
+# read_diff_expr_sample_list($group_file)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -61,6 +61,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -70,9 +73,13 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Reads a table from a file into a matrix. The file can be either a csv (comma separated values), a tsv (tab separated values) or a semicsv (semi-colon separated values) file
+
 sub read_table
 	{
+	# Reads a table from a file into a matrix. The file can be either a csv (comma separated values), a tsv
+	# (tab separated values) or a semicsv (semi-colon separated values) file
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$filetype)'\n\nwhere".
@@ -111,13 +118,17 @@ sub read_table
 		}
 	close($in);
 	return(@matrix);
-	}
+	} # end read_table
 
 
-# Prints a matrix (= table) to a file. The file can be either a csv (comma separated values), a tsv (tab separated values) or a semicsv (semi-colon separated values) file.
-# If desired, several matrices can be written to the same file. References to additional matrices (except the first one) are given after the other arguments at the command line.
 sub write_table
 	{
+	# Prints a matrix (= table) to a file. The file can be either a csv (comma separated values), a tsv
+	# (tab separated values) or a semicsv (semi-colon separated values) file. If desired, several matrices
+	# can be written to the same file. References to additional matrices (except the first one) are given
+	# after the other arguments at the command line.
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref, \$filetype, \$outfile_name, \$linebreaks_lin_win, \$matrix_ref2, \$matrix_ref3 ...)'\n\nwhere".
@@ -164,11 +175,14 @@ sub write_table
 		unless(scalar(@all_matrices)==1)	{	print $out "\n\n";	}
 		}
 	close($out);
-	}
+	} # end write_table
 
-# Converts a table file (csv, tsv or semicsv) to another format (csv, tsv or semicsv)
+
 sub convert_table
 	{
+	# Converts a table file (csv, tsv or semicsv) to another format (csv, tsv or semicsv)
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile, \$infile_type, \$outfile_type, \$outfile_linebreaks_lin_win)'\n\nwhere".
@@ -193,22 +207,22 @@ sub convert_table
 
 	# Create the outfile
 	fileTools::write_table(\@matrix, $outfile_type, $outname, $linebreak);
-	}
+	} # end convert_table
 
-# Writes a list (an array) to a file
+
 sub write_list
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$outfile_name)'\n\nwhere".
-        "\t\$array_reference is a refernce to the array that should be written\n".
+	{
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference, \$outfile_name)'\n\nwhere".
+	"\t\$array_reference is a refernce to the array that should be written\n".
 	"\t\$outfile_name is the desired name of the outfile\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
 
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
-        my $outname = shift @pars or die $usage;
+	my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my $outname = shift @pars or die $usage;
 	my @arr = @{$arref};
 
 	open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
@@ -217,38 +231,41 @@ sub write_list
 		{
 		print($out "$arr[$cc]\n");
 		}
-	
+
 	close($out);
-        }
+	} # end write_list
 
-# Deletes a specified column (or columns) from a table file (csv, tsv or semicsv). Retains both the original file and the new reduced file
-# NB! The first column in a table has to be specified as "n" rather than "0", since Perl can't accept "0" as a command line argument.
+
 sub delete_table_columns
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$filename, \$filetype, \$col_index1, \$col_index2 etc.)'\n\nwhere".
-        "\t\$filename is the name of the file to delete columns from\n".
+	{
+	# Deletes a specified column (or columns) from a table file (csv, tsv or semicsv). Retains both the
+	# original file and the new reduced file NB! The first column in a table has to be specified as "n"
+	# rather than "0", since Perl can't accept "0" as a command line argument.
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$filename, \$filetype, \$col_index1, \$col_index2 etc.)'\n\nwhere".
+	"\t\$filename is the name of the file to delete columns from\n".
 	"\t\$filetype is the type of file to be modified. Options are 'csv' (comma separated values), 'tsv' (tab separated values) and 'semicsv' (semi-colon separated values)\n".
-        "\t\$col_index1 is the index of the first column to be deleted\n".
-        "\t\$col_index2 is the index of the second column to be deleted, etc.\n".
-        "\n".
-        "\tNB! The first column in a table has to be specified as 'n' rather than '0', since Perl can't handle '0' as a command line argument.\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	"\t\$col_index1 is the index of the first column to be deleted\n".
+	"\t\$col_index2 is the index of the second column to be deleted, etc.\n".
+	"\n".
+	"\tNB! The first column in a table has to be specified as 'n' rather than '0', since Perl can't handle '0' as a command line argument.\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $filetype = shift @pars or die $usage;
-        my @cols = @pars or die $usage;
+	my @cols = @pars or die $usage;
 
-        # If @exclude_col_indices contains "n" (the represenation of zero), replace it with 0.
-        foreach my $el (@cols)
-                {
-                if($el eq "n")  {       $el=0;       }
-                }
+	# If @exclude_col_indices contains "n" (the represenation of zero), replace it with 0.
+	foreach my $el (@cols)
+			{
+			if($el eq "n")  {       $el=0;       }
+			}
 
 	my $col_string = join("_", @cols);
 
-        # Read the file into a matrix
+	# Read the file into a matrix
 	my @matrix=fileTools::read_table($infile, $filetype);
 
 	# Delete selected columns
@@ -257,25 +274,28 @@ sub delete_table_columns
 	# Print out the new file
 	my $outname = "minus_${col_string}_${infile}";
 	fileTools::write_table(\@new_matrix, $filetype, $outname, "lin");
+	} # end delete_table_columns
 
-        }
 
-# Takes a list of paired end files (of some format, fastq, fasta, patman...) and concatenates them pairwise. The new, concatenated files are named based on excluding a specific text pattern that
-# distinguishes file1 from file2 in a pair, from the name of file1. Returns an array with the new filenames. If the input or output files or both should be compressed after use, set parameter
-# $zip to 'in', 'out' or 'both'.
 sub concat_PE
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$namefile, \$pattern, \$zip, \$remove_infiles_y_n)'\n\nwhere".
-        "\t\$namefile is a list of the names of the files that should be pairwise concatenated, pairs must be consecutive\n".
-        "\t\$pattern is the text pattern that distinguishes the name of file1 from the name of file2 in a pair, e.g. '_R1_' or 'left'\n".
+	# Takes a list of paired end files (of some format, fastq, fasta, patman...) and concatenates them pairwise.
+	# The new, concatenated files are named based on excluding a specific text pattern that distinguishes file1
+	# from file2 in a pair, from the name of file1. Returns an array with the new filenames. If the input or output
+	# files or both should be compressed after use, set parameter $zip to 'in', 'out' or 'both'.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$namefile, \$pattern, \$zip, \$remove_infiles_y_n)'\n\nwhere".
+	"\t\$namefile is a list of the names of the files that should be pairwise concatenated, pairs must be consecutive\n".
+	"\t\$pattern is the text pattern that distinguishes the name of file1 from the name of file2 in a pair, e.g. '_R1_' or 'left'\n".
 	"\t\$zip is an indicator of whether the input or output files or both should be compressed after use. Options are 'in', 'out' and 'both'.'\n".
 	"\t\$remove_infiles_y_n is an indicator of whether the infiles should be deleted after concatenation. Options are 'y' and 'n'\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $namefile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $namefile = shift @pars or die $usage;
 	my $pattern = shift @pars or die $usage;
 	my $zip = shift @pars or die $usage;
 	my $remove_infiles = shift @pars or die $usage;
@@ -287,10 +307,10 @@ sub concat_PE
 	my @new_names=();
 
 	for(my $c=0; $c<$num_pairs; $c++)
-        	{
-        	my $infile1=shift(@filenames);
-        	my $infile2=shift(@filenames);
-	
+		{
+		my $infile1=shift(@filenames);
+		my $infile2=shift(@filenames);
+
 		my ($file1_gz, $file1)=misc::check_compressed($infile1);
 		my ($file2_gz, $file2)=misc::check_compressed($infile2);
 
@@ -317,20 +337,24 @@ sub concat_PE
 			gzip "$newname" => "${newname}.gz"; unlink($newname);
 			}
 		}	
-        return(@new_names);
-	}
+	return(@new_names);
+	} # end concat_PE
 
-# Writes a table (matrix) to a file as a list (one element on each line, e.g. 'row1_ele1, $row1_ele2, $row2_ele1, $row2_ele2, $row3_ele1...')
+
 sub write_table_as_list
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference, \$outname)'\n\nwhere".
-        "\t\$matrix_reference is a reference to the matrix (table) to be written\n".
-        "\t\$outname is the name that should be given to the resulting file\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $matref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	# Writes a table (matrix) to a file as a list (one element on each line, e.g. 'row1_ele1, $row1_ele2,
+	# $row2_ele1, $row2_ele2, $row3_ele1...')
+
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_reference, \$outname)'\n\nwhere".
+	"\t\$matrix_reference is a reference to the matrix (table) to be written\n".
+	"\t\$outname is the name that should be given to the resulting file\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $matref = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
 	my @matrix = @{$matref};
         open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
@@ -343,22 +367,25 @@ sub write_table_as_list
 		for(my $dd=0; $dd<=$#arr; $dd++)	{	print($out "$arr[$dd]\n");	}
 		}
 
-        close($out);
-	}
+	close($out);
+	} # end write_table_as_list
 
-# Trims fasta sequence ID lines produced by Trinity (transcriptome assembly software) in patman alignment output files
-# Original format: "TRINITY_DN9_c0_g1_i1 len=268 path=[239:0-267] [-1, 239, -2]"
-# Trimmed format: "TRINITY_DN9_c0_g1_i1"
+
 sub trim_trinity_ID_patman
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.pat, \$outname)'\n\nwhere".
-        "\t\$infile.pat is the file (in patman output format = tsv) that should be processed\n".
+	# Trims fasta sequence ID lines produced by Trinity (transcriptome assembly software) in patman alignment output files
+	# Original format: "TRINITY_DN9_c0_g1_i1 len=268 path=[239:0-267] [-1, 239, -2]"
+	# Trimmed format: "TRINITY_DN9_c0_g1_i1"
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.pat, \$outname)'\n\nwhere".
+	"\t\$infile.pat is the file (in patman output format = tsv) that should be processed\n".
 	"\t\$outname is the desired name of the outfile\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
 
 	# Open the infile
@@ -380,24 +407,27 @@ sub trim_trinity_ID_patman
 		print($out "$outline\n");
 		}
 
-        close($in);
-        close($out);
-	}
+	close($in);
+	close($out);
+	} # end trim_trinity_ID_patman
  
-# If a read matches to more than one gene isoform in a transcriptome assembled with Trinity (which has a specific fasta header format that includes
-# both gene- and isoform IDs), keep only the hit to the first isoform. This is useful if you later want to add the readcounts for each isoform into
-# a total read count for the corresponding gene (if not, you may overestimate the readcount since the same physical read may count once for each isoform,
-# when it must reasonably have come from only one of them)
+
 sub remove_multimatch_from_trinity_patman
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.pat \$outname)'\n\nwhere".
-        "\t\$infile is the file to be processed\n".
-        "\t\$outname is the desired name of the resulting file\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	# If a read matches to more than one gene isoform in a transcriptome assembled with Trinity (which has a
+	# specific fasta header format that includes both gene- and isoform IDs), keep only the hit to the first
+	# isoform. This is useful if you later want to add the readcounts for each isoform into a total read count
+	# for the corresponding gene (if not, you may overestimate the readcount since the same physical read may
+	# count once for each isoform, when it must reasonably have come from only one of them)
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.pat \$outname)'\n\nwhere".
+	"\t\$infile is the file to be processed\n".
+	"\t\$outname is the desired name of the resulting file\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
 
 	# Read the infile into a matrix
@@ -472,31 +502,35 @@ sub remove_multimatch_from_trinity_patman
 	# Count total and unique reads in the new file
 	my @new_stats=misc::count_aligned_reads($outname, "nr");	
 
-        return(@new_stats);
-	}
+	return(@new_stats);
+	} # end remove_multimatch_from_trinity_patman
 
 
-# Reads a csv file with sample information needed when performing differential expression analysis on a gene expression matrix. The file lists
-# the names of all samples that should be included in the analysis (not necessarily all samples in the dataset), along with information on
-# sample groupings and which groups should be compared to each other for differential expression. The format should be this:
-#
-#	sample1,groupA
-#	sample2,groupA
-#	sample3,groupB
-#	sample4,groupB
-#	sample5,groupC
-#	sample6,groupC
-#	groupA_vs_groupB
-#	groupA_vs_groupC
-#	groupB_vs_groupC
-#
-# Returns two matrix references, one for a matrix holding the "sample-group" information and the other holding the "group_vs_group" information.
 sub read_diff_expr_sample_list
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$group_file'\n\nwhere".
-        "\t\$group_file is a csv file with sample information needed when performing differential expression analysis on a gene expression matrix.\n".
+	# Reads a csv file with sample information needed when performing differential expression analysis on a gene
+	# expression matrix. The file lists the names of all samples that should be included in the analysis (not
+	# necessarily all samples in the dataset), along with information on sample groupings and which groups should
+	# be compared to each other for differential expression. The format should be this:
+	#
+	#	sample1,groupA
+	#	sample2,groupA
+	#	sample3,groupB
+	#	sample4,groupB
+	#	sample5,groupC
+	#	sample6,groupC
+	#	groupA_vs_groupB
+	#	groupA_vs_groupC
+	#	groupB_vs_groupC
+	#
+	# Returns two matrix references, one for a matrix holding the "sample-group" information and the other holding
+	# the "group_vs_group" information.	
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$group_file'\n\nwhere".
+	"\t\$group_file is a csv file with sample information needed when performing differential expression analysis on a gene expression matrix.\n".
 	"\tThe file lists the names of all samples that should be included in the analysis (not necessarily all samples in the dataset), along with information on\n".
 	"\tsample groupings and which groups should be compared to each other for differential expression. The format should be this:\n\n".
 	"\tsample1,groupA\n".
@@ -509,9 +543,9 @@ sub read_diff_expr_sample_list
 	"\tgroupA_vs_groupC\n".
 	"\tgroupB_vs_groupC\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	# Read the file into an aray
 	my @lines=misc::read_list($infile);
@@ -577,11 +611,13 @@ sub read_diff_expr_sample_list
 
 	my @result=(\@group_matrix, \@comparisons);
 	return(@result);
-	}
+	} # end read_diff_expr_sample_list
 
-# Compresses a file into a .gz file, in a platform independent way.
+
 sub compress
 	{
+	# Compresses a file into a .gz file, in a platform independent way.
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
@@ -595,7 +631,7 @@ sub compress
 	
 	gzip $infile => $newname;
 	unlink($infile);
-	}	
+	} # end compress
 	
 	
 return(1);

@@ -55,6 +55,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -64,9 +67,10 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Starts an rtf file. After this you can use stringRtf to write text to the file, and last you have to use closeRtf to close the file.
 sub openRtf
 	{
+	# Starts an rtf file. After this you can use stringRtf to write text to the file, and last you have to use closeRtf to close the file.
+	
 	my $usage = "Syntax error for sub openRtf. Correct usage:\n\t'rtf::openRtf(\$filename)'\n";
 	my $filename = $_[0] or die $usage;
 	$filename = "${filename}.rtf";
@@ -99,20 +103,26 @@ sub openRtf
 	print(RTF "{\\header\\pard\\qr\\plain\\f0\\par}\n\n");
 	
 	print(RTF "{\\pard ");	# Start a paragraph
-	}
+	} # end openRtf
 
-# Ends an rtf file. You have to use this as the last thing you do/print to an rtf file, or it will not be readable.
+
 sub closeRtf
 	{
+	# Ends an rtf file. You have to use this as the last thing you do/print to an rtf file, or it will not be readable.
+	
 	my $usage = "Syntax error for sub closeRtf. Correct usage:\n\t'rtf::closeRtf(\$filename)'\n";
 	print(RTF "\\par}\n\n}");
-	}
+	} # end closeRtf
 	
-# Creates a string formatted in rtf format, using the given text string, colour (black, purple, dark blue, blue, tuquoise, dark green, light green, yellow, orange, red, dark red), given
-# boldness (yes or no), italicision (yes/no), underlining (yes/no), font (times, courier, calibri) and font size. You have to first open the file with openRtf and when you have created a
-# formatted string with this function, print it to the open rtf file using printRtf. When you are finished, don't forget to close the file with closeRtf)
+
 sub stringRtf
 	{
+	# Creates a string formatted in rtf format, using the given text string, colour (black, purple, dark blue, blue,
+	# tuquoise, dark green, light green, yellow, orange, red, dark red), given boldness (yes or no), italicision (yes/no),
+	# underlining (yes/no), font (times, courier, calibri) and font size. You have to first open the file with openRtf
+	# and when you have created a formatted string with this function, print it to the open rtf file using printRtf.
+	# When you are finished, don't forget to close the file with closeRtf)
+
 	my $usage = "Syntax error for sub stringRtf. Correct usage:\n\t'rtf::stringRtf(\$string, \$colour, \$bold, \$italic, \$underline, \$font, \$fontsize)'\n";
 	my $string = $_[0] or die $usage;
 	my $col = $_[1] or die $usage;
@@ -158,16 +168,20 @@ sub stringRtf
 	
 	my $new_string = ("$font"."$fontsize"."$col"."$bold"."$italic"."$underline"."$string");
 	#print(RTF "$font"."$fontsize"."$col"."$bold"."$italic"."$underline"."$string");
-	}
+	} # end stringRtf
 
-# Writes a pre-formatted rtf-string to an open rtf file. First open the file with openRtf, then create the pre-formatted rtf-string with stringRtf, then print
-# it to the rtf file using this function and finally don't forget to close the rtf file with closeRtf when you are finished.
+
 sub printRft
 	{
+	# Writes a pre-formatted rtf-string to an open rtf file. First open the file with openRtf, then create
+	# the pre-formatted rtf-string with stringRtf, then print it to the rtf file using this function and
+	# finally don't forget to close the rtf file with closeRtf when you are finished.
+
 	my $usage = "Syntax error for sub printRtf. Correct usage:\n\t'rtf::printRtf(\$string)'\n";
 	my $string = $_[0] or die $usage;
 	print(RTF "$string");
-	}
+	} # end printRft
+
 
 return(1);
 

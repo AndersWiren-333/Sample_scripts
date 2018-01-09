@@ -1,8 +1,8 @@
 package normalise;
 
-# sub length_normalise_matrix($file_or_var, $filename_or_matrixref, $length_col, $header_y_n, $sample_col1, $sample_col2 ...)
-# sub quantile_normalise_matrix($file_or_var, $filename_or_matrixref, $header_y_n, $tied_ranks_y_n, $preserve_zeros_y_n, $sample_col1, $sample_col2 ...)
-# sub resampling_check()
+# length_normalise_matrix($file_or_var, $filename_or_matrixref, $length_col, $header_y_n, $sample_col1, $sample_col2 ...)
+# quantile_normalise_matrix($file_or_var, $filename_or_matrixref, $header_y_n, $tied_ranks_y_n, $preserve_zeros_y_n, $sample_col1, $sample_col2 ...)
+# resampling_check()
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -54,6 +54,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -63,21 +66,23 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# This function takes a gene expression matrix (either as a matrix reference – set $file_or_var to ‘var’ - or as a csv file – set $file_or_var to ‘file’)
-# and normalises expression values based on the length of genes. It returns the normalised matrix,  with expression values per 1000 bp of gene.
-# When running the function, specify the column number holding gene lengths ($length_col - if 0, set to "zero"), whether  the matrix has a header
-# ($header_y_n = "y", otherwise "n") and the column numbers holding the data to be normalised (i.e. those not containing annotation information).
-# The returned matrix contains all original headers and annotation information.
+
 sub length_normalise_matrix
 	{
+	# This function takes a gene expression matrix (either as a matrix reference – set $file_or_var to ‘var’ - or as a csv file – set $file_or_var to ‘file’)
+	# and normalises expression values based on the length of genes. It returns the normalised matrix,  with expression values per 1000 bp of gene.
+	# When running the function, specify the column number holding gene lengths ($length_col - if 0, set to "zero"), whether  the matrix has a header
+	# ($header_y_n = "y", otherwise "n") and the column numbers holding the data to be normalised (i.e. those not containing annotation information).
+	# The returned matrix contains all original headers and annotation information.
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$file_or_var, \$filename_or_matrixref, \$length_col, \$header_y_n, \$sample_col1, \$sample_col2 ...)'\n\nwhere".
 	"\t\$file_or_var should be set to 'var' if the input is a reference to a matrix, or 'file' if the input is a csv file (and the output also should be)\n".
 	"\t\$filename_or_matrixref is either the name of the input csv file or a reference to the matrix to be normalised\n".
-	"\t\$length_col is the number of the column holding length information (if it is 0, set to 'zero')\n".
+	"\t\$length_col is the number of the column holding length information (numbering starts at 1)\n".
 	"\t\$header_y_n - set this to 'y' if the input file/matrix has a header or 'n' if it doesn't\n".
-	"\t\$sample_col1, \$sample_col2 etc are the column numbers holding the data to be normalised (if any column is 0, set it to 'zero')\n\n";
+	"\t\$sample_col1, \$sample_col2 etc are the column numbers holding the data to be normalised (numbering starts at 1)\n\n";
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $file_or_var = shift @pars or die $usage;
@@ -85,6 +90,8 @@ sub length_normalise_matrix
 	my $length_col = shift @pars or die $usage;
 	my $header_y_n = shift @pars or die $usage;
 	my @sample_cols = @pars;
+	@sample_cols=misc::shift_input_cols(\@sample_cols);
+	$length_col--;
 	
 	my @matrix=();
 	if($file_or_var eq "file")	{	@matrix=fileTools::read_table($matrix_file_or_ref, "csv");	}
@@ -118,20 +125,24 @@ sub length_normalise_matrix
 	# If the matrix has a header at the outset, add it back again
 	if($header_y_n eq "y")	{	unshift(@matrix, \@header);	}
 	
-	if($file_or_var eq "file")	{	fileTools::write_table(\@matrix, "csv", "ln_${matrix_file_or_ref}", "lin");	}
+	if($file_or_var eq "file")	{	fileTools::write_table(\@matrix, "csv", "lc_${matrix_file_or_ref}", "lin");	}
 	return(@matrix);
-	}
+	} # end length_normalise_matrix
 
-# This function takes a gene expression matrix (either as a matrix reference – set $file_or_var to ‘var’ - or as a csv file – set $file_or_var to ‘file’)
-# and performs quantile normalisation on it (as described in Bolstad et al 2003 - but with additional options). When running the function, specify whether
-# the matrix has a header ($header_y_n = "y", otherwise "n") and the column numbers holding the data to be normalised (i.e. those not containing annotation
-# information. First column is called 1 (i.e. not native perl indexing)). Make sure the column numbers are the last arguments to be specified.
-# Quantile normalisation is a rank based method, and you can choose whether to adjust tied ranks to the average rank within a tied group (set $tied_ranks to "y") or not
-# ($tied_ranks="n"). You can also choose whether zero-values in the original matrix should remain zero ($preserve_zeros = "y") or be replaced by a normalised
-# average expression value ($preserve_zeros = "n"). The returned matrix contains all original headers and annotation information (if any). If the input matrix was read from
-# a file, the normalised matrix will be written to an output csv file (as well as returned as a matrix).
+
 sub quantile_normalise_matrix
 	{
+	# This function takes a gene expression matrix (either as a matrix reference – set $file_or_var to ‘var’ - or as a csv file –
+	# set $file_or_var to ‘file’) and performs quantile normalisation on it (as described in Bolstad et al 2003 - but with additional
+	# options). When running the function, specify whether the matrix has a header ($header_y_n = "y", otherwise "n") and the column
+	# numbers holding the data to be normalised (i.e. those not containing annotation information. First column is called 1 (i.e.
+	# not native perl indexing)). Make sure the column numbers are the last arguments to be specified. Quantile normalisation is a
+	# rank based method, and you can choose whether to adjust tied ranks to the average rank within a tied group (set $tied_ranks to "y")
+	# or not ($tied_ranks="n"). You can also choose whether zero-values in the original matrix should remain zero ($preserve_zeros = "y")
+	# or be replaced by a normalised average expression value ($preserve_zeros = "n"). The returned matrix contains all original headers
+	# and annotation information (if any). If the input matrix was read from a file, the normalised matrix will be written to an output
+	# csv file (as well as returned as a matrix).
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$file_or_var, \$filename_or_matrixref, \$header_y_n, \$tied_ranks_y_n, \$preserve_zeros_y_n, \$sample_col1, \$sample_col2 ...)'\n\nwhere".
@@ -293,14 +304,16 @@ sub quantile_normalise_matrix
 	print "\tAll done!\n\n";
 	
 	return(@new_matrix);
-	}	
+	} # end quantile_normalise_matrix
 
-# Checks the effect on sample complexity and complexity of genome matching reads of resampling a set of non-redundant fasta files to a series of
-# consequtively smaller sizes (specified as percentages of original file size). Specify the size in percentage points between successive steps
-# (e.g. '5' means resample to 95%, 90%, 85% etc), the reference genome (fasta file) that reads should be aligned to, the number of mismatches to
-# allow in alignment between reference genome and an individual sequence read, and the names of the fasta files that should be checked. 
+ 
 sub resampling_check
 	{
+	# Checks the effect on sample complexity and complexity of genome matching reads of resampling a set of non-redundant fasta files to a series of
+	# consequtively smaller sizes (specified as percentages of original file size). Specify the size in percentage points between successive steps
+	# (e.g. '5' means resample to 95%, 90%, 85% etc), the reference genome (fasta file) that reads should be aligned to, the number of mismatches to
+	# allow in alignment between reference genome and an individual sequence read, and the names of the fasta files that should be checked.
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}).".
@@ -393,8 +406,9 @@ sub resampling_check
 		} # Loop over samples ends here
 
 	close($stat);
-	}
-	
+	} # end resampling_check
+
+
 return(1);
 
 # end functions

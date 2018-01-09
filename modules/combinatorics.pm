@@ -1,10 +1,10 @@
 package combinatorics;
 
-# sub pairwise_combinations($array_reference, $num_or_char)
-# sub remove_self_combinations($matrix_reference, $num_or_char)
-# sub remove_redundant_combinations($matrix_reference, $num_or_char)
-# sub value_in_array($value, $arrayref)
-# sub replace_in_array($old_value, $new_value, $arrayref)
+# pairwise_combinations($array_reference, $num_or_char)
+# remove_self_combinations($matrix_reference, $num_or_char)
+# remove_redundant_combinations($matrix_reference, $num_or_char)
+# value_in_array($value, $arrayref)
+# replace_in_array($old_value, $new_value, $arrayref)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -56,6 +56,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -65,13 +68,17 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Takes a list (an array reference) of elements, numeric or as strings, finds the set of unique values (e.g. 3,5,3,7,4  becomes 3,4,7), and returns
-# as a matrix a list of all possible pairwise combinations of these values. Each row in the output matrix represents a combination (e.g. 3,3 or 3,7
-# or 7,4). Values can be either numeric or text (set $num_or_char to 'num' or 'char' at command line). Optionally, self-combinations (e.g. 3,3, "A","A")
-# can be removed (set option $remove_self_y_n to "y", otherwise "n") from the new matrix before it is returned, as can duplicate combinations (i.e. when 3,4 and 4,3
-# is considered the same, one of them is removed - set option $remove_duplicates_y_n to "y", otherwise "n").
+
 sub pairwise_combinations
 	{
+	# Takes a list (an array reference) of elements, numeric or as strings, finds the set of unique values
+	# (e.g. 3,5,3,7,4  becomes 3,4,7), and returns as a matrix a list of all possible pairwise combinations
+	# of these values. Each row in the output matrix represents a combination (e.g. 3,3 or 3,7 or 7,4). Values
+	# can be either numeric or text (set $num_or_char to 'num' or 'char' at command line). Optionally, self-
+	# combinations (e.g. 3,3, "A","A") can be removed (set option $remove_self_y_n to "y", otherwise "n")
+	# from the new matrix before it is returned, as can duplicate combinations (i.e. when 3,4 and 4,3 is
+	# considered the same, one of them is removed - set option $remove_duplicates_y_n to "y", otherwise "n").	
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_ref, \$num_or_char, \$remove_self_y_n, \$remove_duplicates_y_n)'\n\nwhere".
@@ -129,13 +136,16 @@ sub pairwise_combinations
 	undef @selfless_matrix;
 	
 	return(@unique_matrix);
-	}
+	} # end pairwise_combinations
 	
-# Takes a table (as a matrix reference) of pairwise combinations of values (two columns) and removes combinations
-# of equal values (e.g. 3,3 and "A,A"). Returns a new two column table (as a matrix). Values can be either numeric
-# or textual (set $num_or_char to 'num' or 'char' at command line).
+
 sub remove_self_combinations
 	{
+	# Takes a table (as a matrix reference) of pairwise combinations of values (two columns) and removes combinations
+	# of equal values (e.g. 3,3 and "A,A"). Returns a new two column table (as a matrix). Values can be either numeric
+	# or textual (set $num_or_char to 'num' or 'char' at command line).
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref, \$num_or_char)'\n\nwhere".
@@ -172,14 +182,17 @@ sub remove_self_combinations
 	elsif($num_or_char eq "char")	{	@outmatrix = sort { $a->[0] cmp $b->[0] || $a->[1] cmp $b->[1] } @raw_outmatrix;	}
 	
 	return(@outmatrix);
-	}	
+	} # end remove_self_combinations
 
-# Takes a table (as a matrix reference) of pairwise combinations of values (two columns) and removes combinations
-# that are duplicates of other combinations in the sense that which value comes first in a pair doesn't matter,
-# for example, 3,4 and 4,3 are duplicates, as is "A,B" and "B,A". Returns a new two column table (as a matrix).
-# Values can be either numeric or textual (set $num_or_char to 'num' or 'char' at command line).
+
 sub remove_redundant_combinations
 	{
+	# Takes a table (as a matrix reference) of pairwise combinations of values (two columns) and removes combinations
+	# that are duplicates of other combinations in the sense that which value comes first in a pair doesn't matter,
+	# for example, 3,4 and 4,3 are duplicates, as is "A,B" and "B,A". Returns a new two column table (as a matrix).
+	# Values can be either numeric or textual (set $num_or_char to 'num' or 'char' at command line).
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrix_ref, \$num_or_char)'\n\nwhere".
@@ -229,12 +242,16 @@ sub remove_redundant_combinations
 		}
 	
 	return(@outmatrix);
-	}
+	} # end remove_redundant_combinations
 
-# Checks whether a value (supplied as a scalar) is present in array (supplied as an array reference) or not. Returns “y” if it is and “n” if it isn’t.
-# Set argument $num_or_char to ‘num’ if the value and array are numeric or ‘to char’ if they are text.
+
 sub value_in_array
 	{
+	# Checks whether a value (supplied as a scalar) is present in array (supplied as an array reference)
+	# or not. Returns “y” if it is and “n” if it isn’t. Set argument $num_or_char to ‘num’ if the value
+	# and array are numeric or ‘to char’ if they are text.
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$value, \$arrayref, \$num_or_char)'\n\nwhere".
@@ -261,13 +278,16 @@ sub value_in_array
 		}
 
 	return($y_or_n);
-	}
+	} # end value_in_array
 	
 
-# Checks whether all the elements in array1 (supplied as an array reference) are present in array2 (also supplied as an array reference) or not.
-# Returns “y” if they are and “n” if they aren’t. Set argument $num_or_char to ‘num’ if the arrays are numeric or ‘to char’ if they are text.
 sub array_in_array
 	{
+	# Checks whether all the elements in array1 (supplied as an array reference) are present in
+	# array2 (also supplied as an array reference) or not. Returns “y” if they are and “n” if they
+	# aren’t. Set argument $num_or_char to ‘num’ if the arrays are numeric or ‘to char’ if they are text.
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2, \$num_or_char)'\n\nwhere".
@@ -296,7 +316,8 @@ sub array_in_array
 		}
 
 	return($y_or_n_global);
-	}
+	} # end array_in_array
+
 
 return(1);
 

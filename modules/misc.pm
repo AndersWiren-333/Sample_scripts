@@ -1,16 +1,16 @@
 package misc;
 
-# sub patman_align($fasta_infile, $patman_outfile_name, $ref_genome, $max_seqs_per_file, $mismatches)
-# sub read_filelist($filelist)
-# sub file_to_matrix($file, $separator, $num_rows, $col_1_name, $col_2_name etc)
-# sub unique_matrix(\@matrix)
-# sub unique_list(\@array)
-# sub count_aligned_reads($patman_output_file)
-# sub blast_to_matrix($blastfile.tsv, $top_num_hits, $exclude_string1, $exclude_string2 etc...)
-# sub check_compressed($filename)
-# sub length_from_id_to_column($infile, $outname)
-# sub shift_input_cols(\@cols);
-# sub type($value)
+# patman_align($fasta_infile, $patman_outfile_name, $ref_genome, $max_seqs_per_file, $mismatches)
+# read_filelist($filelist)
+# file_to_matrix($file, $separator, $num_rows, $col_1_name, $col_2_name etc)
+# unique_matrix(\@matrix)
+# unique_list(\@array)
+# count_aligned_reads($patman_output_file)
+# blast_to_matrix($blastfile.tsv, $top_num_hits, $exclude_string1, $exclude_string2 etc...)
+# check_compressed($filename)
+# length_from_id_to_column($infile, $outname)
+# shift_input_cols(\@cols);
+# type($value)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -62,6 +62,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -71,27 +74,32 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Aligns DNA or RNA sequences in a fasta file to a reference sequence (e.g. genome or transcriptome) allowing a given number of mismatches between sequence and reference. 
-# Automaticllay splits infiles into smaller pieces if they are larger than a given number of sequences. The output is an alignment information file (in patman format). The
-# function then counts the total and unique (non-redundant) number of reference matching reads, the complexity and number of copies per read and the number of reads
-# that map to the reference sequence in multiple places, and returns these numbers as an array.
+
 sub patman_align
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: ".
+	# Aligns DNA or RNA sequences in a fasta file to a reference sequence (e.g. genome or transcriptome) allowing
+	# a given number of mismatches between sequence and reference. Automaticllay splits infiles into smaller pieces
+	# if they are larger than a given number of sequences. The output is an alignment information file (in patman format).
+	# The function then counts the total and unique (non-redundant) number of reference matching reads, the complexity
+	# and number of copies per read and the number of reads that map to the reference sequence in multiple places, and
+	# returns these numbers as an array.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: ".
 	"'${subname}(\$fasta_infile, \$patman_outfile_name, \$ref_genome, \$max_seqs_per_file, \$mismatches, \$fasta_format)'\n\nwhere".
-        "\t\$fasta_infile is the fasta file with reads to be aligned\n".
-        "\t\$patman_outfile_name is the desired name of the outfile\n".
-        "\t\$ref_genome is the reference sequence to align to\n".
+	"\t\$fasta_infile is the fasta file with reads to be aligned\n".
+	"\t\$patman_outfile_name is the desired name of the outfile\n".
+	"\t\$ref_genome is the reference sequence to align to\n".
 	"\t\$max_seqs_per_file - fasta infiles with more sequences will be split into pieces before alignment to conserve memory\n".
 	"\t\$mismatches is the maximum allowed differences between a sequence read and the reference sequence\n".
 	"\t\$fasta_format is the format of the fasta files to be aligned. This can be either 'r', 'nr' or 'mnr'\n\nwhere".
 	"\t'r' is 'redundant' i.e. '>id (linebreak) sequence'\n".
 	"\t'nr' is 'non-redundant' i.e. '>sequence-abundance (linebreak) sequence'\n".
 	"\t'mnr' is 'multi-non-redundant' i.e. '>sequence_abundance1_abundance2_abundance3... (linebreak) sequence'\n\n";
-        my @pars = @_ or die $usage;
-        #foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my @pars = @_ or die $usage;
+	#foreach my $el (@pars)  {       $el = text::trim($el);  }
 
 	my $infile_fa = shift @pars or die $usage;
 	my $outfile_pat = shift @pars or die $usage;
@@ -101,26 +109,29 @@ sub patman_align
 	my $fasta_format = shift(@pars) or die $usage;
 	my $temp_pat = "$outfile_pat"."_TEMP";
 
-        my $num_parts = fastaTools::divide_fasta($infile_fa, $seqs_per_piece);
+    my $num_parts = fastaTools::divide_fasta($infile_fa, $seqs_per_piece);
 
-        for(my $d=1; $d<=$num_parts; $d++)
-                {
-                my $partfile_fa = "${infile_fa}_${d}.fa";
-                my $partfile_pat = "$partfile_fa".".pat";
-                system("patman -D $ref_genome -P $partfile_fa -o $partfile_pat -e $mismatch");
-                system("cat $partfile_pat >> $temp_pat");
-                unlink($partfile_fa, $partfile_pat);
-                }
+	for(my $d=1; $d<=$num_parts; $d++)
+			{
+			my $partfile_fa = "${infile_fa}_${d}.fa";
+			my $partfile_pat = "$partfile_fa".".pat";
+			system("patman -D $ref_genome -P $partfile_fa -o $partfile_pat -e $mismatch");
+			system("cat $partfile_pat >> $temp_pat");
+			unlink($partfile_fa, $partfile_pat);
+			}
 	move($temp_pat, $outfile_pat);
 	my @stats=misc::count_aligned_reads($outfile_pat, $fasta_format);	# This assumes that the input fasta files were in non-redundant format, doesn't it?
 	return(@stats);
-	}
+	} # end patman_align
 
-# Reads a given plain text file with filenames (one on each line) into a matrix.
+
 sub read_list
 	{
+	# Reads a given plain text file with filenames (one on each line) into a matrix.
+	
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+    my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$filelist)'\n";
 	my $infile = $_[0] or die $usage;
 	if(!open(IN, $infile))	{	die "sub $subname couldn't open filelist $infile\n";	}
@@ -132,17 +143,20 @@ sub read_list
 		push(@names, $file);
 		}	
 	return(@names);
-	}
+	} # end read_list
 
-# Reads the given number of rows and the named columns of a given file (with a given type of field separator) into a matrix. The return value is a matrix with three lines.
-# The first line is a reference to the whole matrix (without headers), the second line is a reference to an array holding the headers (if the original file had no headers,
-# this array will hold headers of the form "column_0, column_1...") of the selected columns and the third line is a reference to an array holding the indices (column numbers)
-# of the selected columns.
+
 sub file_to_matrix
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage = "\nSyntax error for sub $subname. Correct usage: '${subname}(\$file, \$separator, \$headers_y_n, \numrows=333, \$col_1_name, \$col_2_name etc)'\n\nwhere\n".
+	{
+	# Reads the given number of rows and the named columns of a given file (with a given type of field separator) into a matrix. The return value is a matrix with three lines.
+	# The first line is a reference to the whole matrix (without headers), the second line is a reference to an array holding the headers (if the original file had no headers,
+	# this array will hold headers of the form "column_0, column_1...") of the selected columns and the third line is a reference to an array holding the indices (column numbers)
+	# of the selected columns.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage = "\nSyntax error for sub $subname. Correct usage: '${subname}(\$file, \$separator, \$headers_y_n, \numrows=333, \$col_1_name, \$col_2_name etc)'\n\nwhere\n".
 	"\t\$file is the infile (required)\n".
 	"\t\$separator is which type of delimiter used between fields in the infile (options are 'tab', 'comma' and 'semicolon')(required)\n".
 	"\t\$headers_y_n is an indicator of whether the input matrix has headers or not (options are 'y' for yes and and 'n' for no)(required)\n".
@@ -153,9 +167,9 @@ sub file_to_matrix
 	"\t(if the infile has no headers, the returned headers will be 'column_1, column_2' etc.) and the third line is a reference to an array holding the indices (column numbers) of the desired columns.\n\n";
 
 	# Accept required input parameters
-        my @pars = @_;
+	my @pars = @_;
 	foreach my $el (@pars)	{	$el = text::trim($el);	}
-        my $infile = shift(@pars) or die $usage;
+	my $infile = shift(@pars) or die $usage;
 	my $sep = shift(@pars) or die $usage;
 	my $headers_y_n = shift(@pars) or die $usage;
 	unless(($sep eq "tab") or ($sep eq "comma") or ($sep eq "semicolon"))  {       die "Syntax error for sub $subname. Argument \$separator must be either 'tab', 'comma' or 'semicolon'. Try again!\n";    }
@@ -184,16 +198,16 @@ sub file_to_matrix
 
 
 	my @headers=();
-        my $linenum=0;
+	my $linenum=0;
 
 	if($sep eq "tab")	{	$sep = "\t";	}
 	elsif($sep eq "comma")	{	$sep = ",";	}
 	elsif($sep eq "semicolon")  {       $sep = ";";     }
 
 	# Open infile
-        if(!open(IN, $infile))  {       die "sub $subname couldn't open infile $infile\n"; }
-        my @matrix_all_cols=();
-        my $lineno=0;
+	if(!open(IN, $infile))  {       die "sub $subname couldn't open infile $infile\n"; }
+	my @matrix_all_cols=();
+	my $lineno=0;
 	my $stop="alfa";
 	if($nrows ne "all")
 		{	
@@ -201,12 +215,12 @@ sub file_to_matrix
 		if($headers_y_n eq "y") {       $stop++;        }
 		}
 
-        # Loop over lines in file
+	# Loop over lines in file
 	my @colnames=();
         LINES: while(<IN>)
-                {
+		{
 		$lineno++;
-                my $line=text::trim($_);
+		my $line=text::trim($_);
 
 		# Make sure that empty lines are not included in the matrix (these may contain formatting characters and therefore
 		# be interpreted as data though they are empty if you are transferring data from an excel sheet)
@@ -218,14 +232,14 @@ sub file_to_matrix
 		if($line =~ m/^#/m)	{	$lineno--; next LINES;	}
 
 		# Process current line
-                my @arr = split("$sep", $line);
-                foreach my $le (@arr)   {       $le=text::trim($le);    }
+		my @arr = split("$sep", $line);
+		foreach my $le (@arr)   {       $le=text::trim($le);    }
 
 		# If we have passed the number of rows that should be returned, exit loop at this stage
-                if(($nrows ne "all") and ($lineno==$stop))   {       last;   }
+		if(($nrows ne "all") and ($lineno==$stop))   {       last;   }
 
-                # If there is a header row, read it
-                if(($headers_y_n eq "y") and ($lineno==1))	{	@colnames = @arr; next;	}
+		# If there is a header row, read it
+		if(($headers_y_n eq "y") and ($lineno==1))	{	@colnames = @arr; next;	}
 
 		# If not, make a header row
 		elsif(($headers_y_n eq "n") and ($lineno==1))
@@ -238,7 +252,7 @@ sub file_to_matrix
 				}
 			}
 		push(@matrix_all_cols, \@arr);
-                } # Loop over lines in file ends here
+		} # Loop over lines in file ends here
 	close(IN);
 
 	# Now we have the whole matrix and an array with column names. 
@@ -274,10 +288,10 @@ sub file_to_matrix
 		elsif($headers_y_n eq "n")
 			{
 			for(my $ee=0; $ee<=$#sel_colindices; $ee++)
-                                {
-                                my $num = $sel_colindices[$ee];
-                                $sel_colnames[$ee] = "column_".$num;
-                                }
+				{
+				my $num = $sel_colindices[$ee];
+				$sel_colnames[$ee] = "column_".$num;
+				}
 			}
 
 		
@@ -297,13 +311,15 @@ sub file_to_matrix
 		} # End of "if only selected columns should be returned"-statement
 
 	my @grand_matrix = (\@matrix, \@sel_colnames, \@sel_colindices);
-        return(@grand_matrix);
-        }
+	return(@grand_matrix);
+	} # end file_to_matrix
 
 
-# Removes duplicates from a matrix. Specify which column (starting at 1) the uniqueness should be based on.
 sub unique_matrix
 	{
+	# Removes duplicates from a matrix. Specify which column (starting at 1) the uniqueness should be based on.
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage = "\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$matrixref, \$column, \$num_or_alph, \$headers_y_n)'\n\nwhere\n".
@@ -360,12 +376,13 @@ sub unique_matrix
                         }
 		}
 	return(@new_matrix);
-	}
+	} # end unique_matrix
 
 
-# Removes duplicates from an array
 sub unique_list
 	{
+	# Removes duplicates from an array
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage = "\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$arrayref, \$num_or_alph)'\n\nwhere\n".
@@ -392,38 +409,42 @@ sub unique_list
 		if($num_or_alph =~ m/num/)
 			{
 			unless($value==$comp_val)
-					{
-					push(@new_arr, $arr[$cc]);
-					$comp_val=$value;
-					}
+				{
+				push(@new_arr, $arr[$cc]);
+				$comp_val=$value;
+				}
 			}
 		if($num_or_alph =~ m/alph/)
 			{
 			unless($value eq $comp_val)
-					{
-					push(@new_arr, $arr[$cc]);
-					$comp_val=$value;
-					}
+				{
+				push(@new_arr, $arr[$cc]);
+				$comp_val=$value;
+				}
 			}
 		}
 	return(@new_arr);
-	}
+	} # end unique_list
 
-# Counts the number of total, unique and multiply aligning reads in a patman alignment file and returns those numbers along with sample complexity and
-# copies per read. This is the array returned: @($countT, $countU, $complex, $cop_per_read, $countM)
+
 sub count_aligned_reads
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	# Counts the number of total, unique and multiply aligning reads in a patman alignment file and returns those
+	# numbers along with sample complexity and copies per read. This is the array returned: @($countT, $countU,
+	# $complex, $cop_per_read, $countM)
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage = "\nUsage error for sub ${subname} (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$patman_output_file, \$fasta_format)'\n\nwhere\n".
-        "\t\$patman_output_file is a file containing information about where sequence reads align to a reference sequence\n".
+	"\t\$patman_output_file is a file containing information about where sequence reads align to a reference sequence\n".
 	"\t\$fasta_format is the format of the fasta files to be aligned. This can be either 'r', 'nr' or 'mnr'\n\nwhere".
 	"\t\t'r' is 'redundant' i.e. '>id (linebreak) sequence'\n".
 	"\t\t'nr' is 'non-redundant' i.e. '>sequence-abundance (linebreak) sequence'\n".
 	"\t\t'mnr' is 'multi-non-redundant' i.e. '>sequence_abundance1_abundance2_abundance3... (linebreak) sequence'\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $fasta_format = shift @pars or die $usage;
 
 	open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
@@ -443,12 +464,12 @@ sub count_aligned_reads
 	# Sort the patman file matrix on ID
 	@matrix = sort { $a->[1] cmp $b->[1] } @matrix;
 
-        my $countT=0;
-        my $countU=0;
-        my $countM=0;
+	my $countT=0;
+	my $countU=0;
+	my $countM=0;
 	my $multiple="n";
-        my $complex = 0;
-        my $cop_per_read = 0;
+	my $complex = 0;
+	my $cop_per_read = 0;
 
 	if(@matrix)
 		{
@@ -572,21 +593,25 @@ sub count_aligned_reads
 
 	my @results = ($countT, $countU, $complex, $cop_per_read, $countM);
 	return(@results);
-	}
+	} # end count_aligned_reads
 
-# Reads a textfile containing blasthits into a matrix (alphabetically sorted on sequence id, ascending) and returns the matrix. One row for each blasted sequence, first column is sequence id, all other
-# columns are blast hits in order of highest bitscore, % identity, alignment length lowest e-value 
+
 sub blast_to_matrix
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$blastfile.tsv, \$top_num_hits, \$exclude_string1, \$exclude_string2 etc...)'\n\nwhere".
-        "\t\$blastfile.tsv is a file with blast results, in tsv format\n".
-        "\t\$top_num_hits is the number of best hits to report for each blasted sequence\n".
-        "\t\$exclude_string1 (etc) are any number of (optional) strings that, if a blast hit contains them in its name, excludes that blast hit from being reported\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $blastfile = shift @pars or die $usage;
+	# Reads a textfile containing blasthits into a matrix (alphabetically sorted on sequence id, ascending) and returns the matrix.
+	# One row for each blasted sequence, first column is sequence id, all other columns are blast hits in order of highest bitscore,
+	# % identity, alignment length lowest e-value 
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nSyntax error for sub ${subname}. Correct usage: '${subname}(\$blastfile.tsv, \$top_num_hits, \$exclude_string1, \$exclude_string2 etc...)'\n\nwhere".
+	"\t\$blastfile.tsv is a file with blast results, in tsv format\n".
+	"\t\$top_num_hits is the number of best hits to report for each blasted sequence\n".
+	"\t\$exclude_string1 (etc) are any number of (optional) strings that, if a blast hit contains them in its name, excludes that blast hit from being reported\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $blastfile = shift @pars or die $usage;
 	my $topnum = shift @pars or die $usage;
 	my @exclude_strings=();
 	if(defined($pars[0]))	{	@exclude_strings=@pars;	}
@@ -597,14 +622,14 @@ sub blast_to_matrix
 	# Read blast result file
 	my @blast_hits=();
 	while(my $line = <$blast>)
-        	{
-        	$line = text::trim($line);
-        	my @arr=split("\t", $line);
-        	for(my $i=0; $i<=$#arr; $i++)    {       $arr[$i]=text::trim($arr[$i]);        }
-        	$arr[1] =~ s/,//g;	# If the blast hit name contains comma, remove it, because it can cause a formatting error if the results are to be written to a csv file later (and they probably are) 
-        	$arr[0] =~ s/u//;	# If the Feature_ID of the blast hit has an initial "u" in it (in some parts of DE ananlysis it is used to indicate that this is an unannotated transcript), remove the "u". 
-        	push(@blast_hits, \@arr);
-        	}
+		{
+		$line = text::trim($line);
+		my @arr=split("\t", $line);
+		for(my $i=0; $i<=$#arr; $i++)    {       $arr[$i]=text::trim($arr[$i]);        }
+		$arr[1] =~ s/,//g;	# If the blast hit name contains comma, remove it, because it can cause a formatting error if the results are to be written to a csv file later (and they probably are) 
+		$arr[0] =~ s/u//;	# If the Feature_ID of the blast hit has an initial "u" in it (in some parts of DE ananlysis it is used to indicate that this is an unannotated transcript), remove the "u". 
+		push(@blast_hits, \@arr);
+		}
 	close($blast);
 
 	# Sort blast hits on Feature_ID, bitscore, % identity, alignment length and e-value
@@ -710,19 +735,22 @@ sub blast_to_matrix
 
 	# Return the matrix
 	return(@new_blast_matrix);	
-	}
+	} # end blast_to_matrix
 
-# Checks whether a file is compressed and if so uncompresses it and returns the name of the compressed file
-# as well as the uncompressed file. 
+ 
 sub check_compressed
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
-        "\t\$infile is the file to be checked\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	# Checks whether a file is compressed and if so uncompresses it and returns the name of the compressed file
+	# as well as the uncompressed file.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
+	"\t\$infile is the file to be checked\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	my ($dir, $file, $basename, $suffix)=text::parse_path($infile);
 
@@ -770,24 +798,27 @@ sub check_compressed
 		}
 
 	my @outarr=($filename_gz, $filename);
-        return(@outarr);
-	}
+	return(@outarr);
+	} # end check_compressed
 
-# Strips the Feature_IDs in the first column an expression matrix of the ending feature length information (format "gene_ABC_23_445") and
-# converts it into a length column that is added to the matrix
+
 sub length_from_id_to_column
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.csv, \$header_y_n, \$outname)'\n\nwhere".
-        "\t\$infile.csv is a gene expression matrix in csv format\n".
+	{
+	# Strips the Feature_IDs in the first column an expression matrix of the ending feature length information (format "gene_ABC_23_445") and
+	# converts it into a length column that is added to the matrix
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.csv, \$header_y_n, \$outname)'\n\nwhere".
+	"\t\$infile.csv is a gene expression matrix in csv format\n".
 	"\t\$header_y_n is an indicator of whether the infile has a header or not ('y' for yes, 'n' for no)\n".
 	"\t\$outname is the preferred name of the outfile\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to probl$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $header_y_n = shift @pars or die $usage;
-        my $outname = shift @pars or die $usage;
+	my $outname = shift @pars or die $usage;
 
 	# Read the infile
 	my @matrix=fileTools::read_table($infile, "csv");	
@@ -817,14 +848,17 @@ sub length_from_id_to_column
 		}
 
 	fileTools::write_table(\@matrix, "csv", $outname, "lin");
-        }
+	} # end length_from_id_to_column
 
-# Given a reference to an array containing numbers, this subroutine subtracts 1 from each number and returns an array with the new numbers.
-# Perl can’t accept 0 (zero) as a command line argument for scripts or subroutines, so when you tell a script that you want to pick out the
-# first column in a matrix, you have to tell it to pick column 1. But since columns (and rows in arrays) in perl are always numbered from 0,
-# you have to subtract 1 from each column number you give a script. This function does that.
+
 sub shift_input_cols
 	{
+	# Given a reference to an array containing numbers, this subroutine subtracts 1 from each number and returns an array with the new numbers.
+	# Perl can’t accept 0 (zero) as a command line argument for scripts or subroutines, so when you tell a script that you want to pick out the
+	# first column in a matrix, you have to tell it to pick column 1. But since columns (and rows in arrays) in perl are always numbered from 0,
+	# you have to subtract 1 from each column number you give a script. This function does that.
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
@@ -840,11 +874,13 @@ sub shift_input_cols
 	for(my $c=0; $c<=$#arr; $c++)	{	$arr[$c]--;	}
 	
 	return(@arr);
-	}
+	} # end shift_input_cols
 	
 
 sub type
 	{
+	# Checks id a value is a number or a text string
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$value)'\n\nwhere".
@@ -863,10 +899,9 @@ sub type
 	else	{	$type = "char";	}
 	
 	return($type);
-	}	
+	} # end type
 
-	
-	
+
 return(1);
 
 # end functions

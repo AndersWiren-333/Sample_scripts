@@ -1,16 +1,16 @@
 package fastaTools;
 
-# sub fasta_to_matrix($fasta_file)
-# sub fasta_to_matrix2($fasta_file)
-# sub divide_fasta($fasta_file, $num_seqs)
-# sub seqs_from_reference(\@feat_ids, $ref_sequence)
-# sub count_nr_fasta_reads($fasta_file)
-# sub count_reads_fasta($fasta_file)
-# sub count_reads_mnr_fasta($fasta_file)
-# sub deredundise_nr_fasta($file, $outname)
-# sub get_seqs_from_fasta($ID_list.txt, $fasta_file.fa, $outname)
-# sub get_seq_lengths_from_fasta($infile.fa);
-# sub remove_alignment_target_from_fasta($infile.fa, $target.fa, $mismatch, $outname)
+# fasta_to_matrix($fasta_file)
+# fasta_to_matrix2($fasta_file)
+# divide_fasta($fasta_file, $num_seqs)
+# seqs_from_reference(\@feat_ids, $ref_sequence)
+# count_nr_fasta_reads($fasta_file)
+# count_reads_fasta($fasta_file)
+# count_reads_mnr_fasta($fasta_file)
+# deredundise_nr_fasta($file, $outname)
+# get_seqs_from_fasta($ID_list.txt, $fasta_file.fa, $outname)
+# get_seq_lengths_from_fasta($infile.fa);
+# remove_alignment_target_from_fasta($infile.fa, $target.fa, $mismatch, $outname)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -62,6 +62,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -71,9 +74,12 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Reads a fasta file into a matrix
+
 sub fasta_to_matrix
 	{
+	# Reads a fasta file into a matrix
+	
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file)'\n\nwhere".
@@ -96,83 +102,88 @@ sub fasta_to_matrix
 		}
 
 	return(@matrix);
-	}
+	} # end fasta_to_matrix
 
-# Reads a fasta file into a matrix
+
 sub fasta_to_matrix2
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file)'\n\nwhere".
-        "\t\$fasta_file is the file to read into a matrix\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	# Reads a fasta file into a matrix
+	
 
-        if(!open(IN, $infile))  {       die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n"; }
-        my @arr=();
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file)'\n\nwhere".
+	"\t\$fasta_file is the file to read into a matrix\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
-        # First add each line as an element to an array
-        while(<IN>)
+	if(!open(IN, $infile))  {       die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n"; }
+	my @arr=();
+
+	# First add each line as an element to an array
+	while(<IN>)
+		{
+		my $line = text::trim($_);
+		push(@arr, $line);
+		}
+	close(IN);
+
+	# If the first line isn't an id line, exit with an error message
+	if($arr[0] !~ m/^>/)    {       die "The fasta file $infile used in sub fasta_to_matrix seems to have the wrong format (it doesn't start with a proper id line). Correct the file and try again.\n";    }
+	if($arr[$#arr] =~ m/^>/)        {       die "The fasta file $infile used in sub fasta_to_matrix seems to have the wrong format (it ends with an id line). Correct the file and try again.\n";   }
+
+	# Then add all lines in the correct places in a matrix (i.e. id lines in first column and sequences in the second)
+	my @matrix=();
+	my $seqno=0;
+	my $tempstring="";
+
+	for(my $cc=0; $cc<=$#arr; $cc++)
+		{
+		my $line = $arr[$cc];
+
+		# If this is an id line
+		if($line =~ /^>/)
 			{
-			my $line = text::trim($_);
-			push(@arr, $line);
-			}
-        close(IN);
+			# If it is the first id line, just add it to the matrix
+			$line =~ s/>//;         # Remove the angle bracket from the ID line
+			if($cc==0)      {       $matrix[$seqno][0]=$line;       }
 
-        # If the first line isn't an id line, exit with an error message
-        if($arr[0] !~ m/^>/)    {       die "The fasta file $infile used in sub fasta_to_matrix seems to have the wrong format (it doesn't start with a proper id line). Correct the file and try again.\n";    }
-        if($arr[$#arr] =~ m/^>/)        {       die "The fasta file $infile used in sub fasta_to_matrix seems to have the wrong format (it ends with an id line). Correct the file and try again.\n";   }
-
-        # Then add all lines in the correct places in a matrix (i.e. id lines in first column and sequences in the second)
-        my @matrix=();
-        my $seqno=0;
-        my $tempstring="";
-
-        for(my $cc=0; $cc<=$#arr; $cc++)
-			{
-			my $line = $arr[$cc];
-
-			# If this is an id line
-			if($line =~ /^>/)
-				{
-				# If it is the first id line, just add it to the matrix
-				$line =~ s/>//;         # Remove the angle bracket from the ID line
-				if($cc==0)      {       $matrix[$seqno][0]=$line;       }
-
-				# If it is any other id line, finish adding the preceding sequence to the matrix, then add the new id line
-				else
-					{
-					$matrix[$seqno][1] = $tempstring;
-					$tempstring="";
-					$seqno++;
-					$matrix[$seqno][0]=$line;
-					}
-				}
-
-			# Else, if it is a sequence line
+			# If it is any other id line, finish adding the preceding sequence to the matrix, then add the new id line
 			else
 				{
-				# If it is the last line in the file
-				if($cc==$#arr)
-					{
-					$tempstring = "$tempstring"."$line";
-					$matrix[$seqno][1]=$tempstring;
-					$tempstring="";
-					}
-
-				# If it is any other sequence line
-				else    {       $tempstring = "$tempstring"."$line";    }
+				$matrix[$seqno][1] = $tempstring;
+				$tempstring="";
+				$seqno++;
+				$matrix[$seqno][0]=$line;
 				}
-			} # Loop over elements in array ends here
+			}
 
-        return(@matrix);
-	}
+		# Else, if it is a sequence line
+		else
+			{
+			# If it is the last line in the file
+			if($cc==$#arr)
+				{
+				$tempstring = "$tempstring"."$line";
+				$matrix[$seqno][1]=$tempstring;
+				$tempstring="";
+				}
+
+			# If it is any other sequence line
+			else    {       $tempstring = "$tempstring"."$line";    }
+			}
+		} # Loop over elements in array ends here
+
+	return(@matrix);
+	} # end fasta_to_matrix2
 
 
-# DIVIDES A FASTA FILE INTO SMALLER PIECES. The pieces are defined by a given number of sequences per piece
 sub divide_fasta
 	{
+	# Divides a fatsa file into smaller pieces. The pieces are defined by a given number of sequences per piece
+	
+	
 	# Declare variables and filehandles
 	my $usage="\nSyntax error for sub divide_fasta. Correct usage: 'fastaTools::divide_fasta_file(\$fasta_file, \$sequences_per_piece)'\n";
 	my $infile = $_[0] or die $usage;
@@ -265,12 +276,15 @@ sub divide_fasta
 		} # End of second while loop
 	close(IN);
 	return($part);
-	} # End of sub
+	} # end divide_fasta
 
 
-# Gets the reference sequence for given feature IDs from a given reference genome/transcriptome and prints them to a fasta file
 sub seqs_from_reference
 	{
+	# Gets the reference sequence for given feature IDs from a given reference genome/transcriptome
+	# and prints them to a fasta file
+
+
 	my $usage="\nSyntax error for sub seqs_from_reference. Correct usage: 'fastaTools::seqs_from_reference(\@feat_ids, \$ref_sequence.fa, \$outfile_name)'\n\nwhere".
 	"\t\@feat_ids is an array with feature IDs in the format NC_1234.5_678_1011\n".
 	"\t\$ref_sequence.fa is a fasta file containing the refernce genome/transcriptome/contigs\n".
@@ -314,18 +328,21 @@ sub seqs_from_reference
 		}
 	close(OUT);
 	return(@matrix);
-	}
+	} # end seqs_from_reference
 
-# Counts the number of total and unique (= non-redundant) reads in a fasta file in non-redundant format
+
 sub count_nr_fasta_reads
 	{
+	# Counts the number of total and unique (= non-redundant) reads in a fasta file in non-redundant format
+	
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa)'\n\nwhere".
-        "\t\$infile.fa is the file (in non-redundant fasta format) which should have its reads counted\n\n";
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa)'\n\nwhere".
+	"\t\$infile.fa is the file (in non-redundant fasta format) which should have its reads counted\n\n";
 	my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	open(my $in, "<", $infile) or die "Subroutine '$subname' (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
 
@@ -334,32 +351,35 @@ sub count_nr_fasta_reads
 
 	# Loop over reads in file
 	while(my $line = <$in>)
-        	{
-        	my $line = text::trim($line);
-        	if($line =~ m/>/)
-                	{
-                	$unique++;
-                	my @arr = split("-", $line);
-			foreach my $el (@arr)	{	$el = text::trim($el);	}
-                	my $abund = $arr[1];
-                	$total = $total+$abund;
-                	}
-        	}
+		{
+		my $line = text::trim($line);
+		if($line =~ m/>/)
+				{
+				$unique++;
+				my @arr = split("-", $line);
+		foreach my $el (@arr)	{	$el = text::trim($el);	}
+				my $abund = $arr[1];
+				$total = $total+$abund;
+				}
+		}
 	close($in);
 	my @stats = ($total, $unique);
 	return(@stats);
-	}
+	} # end count_nr_fasta_reads
 
-# Counts the number of sequence reads in (any) fasta file and returns that number
+
 sub count_reads_fasta
 	{
+	# Counts the number of sequence reads in (any) fasta file and returns that number
+	
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file.fa)'\n\nwhere".
-        "\t\$fasta_file.fa is the file to have its reads counted\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$fasta_file.fa)'\n\nwhere".
+	"\t\$fasta_file.fa is the file to have its reads counted\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
 	my $id_lines=0;
@@ -370,21 +390,23 @@ sub count_reads_fasta
 		if($line =~ m/^>/)	{	$id_lines++;	}
 		}
 	close($in);
-        return($id_lines);
-	}
+	return($id_lines);
+	} # end count_reads_fasta
 
-# Counts the number of total and redundant sequence reads in a fasta file in multi_redudnant format, i.e.
-# >sequence_abundunce1_abundance2_abundance3...
-# sequence (where each abundance in the id line is the abundance of that read in a specific sample/library)
+
 sub count_reads_mnr_fasta
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa)'\n\nwhere".
-        "\t\$infile.fa is the file whose reads should be counted\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;
+	{
+	# Counts the number of total and redundant sequence reads in a fasta file in multi_redudnant format, i.e.
+	# >sequence_abundunce1_abundance2_abundance3...
+	# sequence (where each abundance in the id line is the abundance of that read in a specific sample/library)		
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa)'\n\nwhere".
+	"\t\$infile.fa is the file whose reads should be counted\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	# Read file into matrix (two columns: id and sequence)
 	my @matrix=fastaTools::fasta_to_matrix($infile);
@@ -403,21 +425,24 @@ sub count_reads_mnr_fasta
 			}
 		}
 	my @stats = ($total, $unique);
-        return(@stats);
-        }
+	return(@stats);
+	} # end count_reads_mnr_fasta
 
-# Deredundises a fasta file in non-redundant format (i.e. '>sequnce-abudance_linebreak_sequence')
+
 sub deredundise_nr_fasta
 	{
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa, \$outname)'\n\nwhere".
-        "\t\$infile.fa is the file to be deredundised\n".
+	# Deredundises a fasta file in non-redundant format (i.e. '>sequnce-abudance_linebreak_sequence')
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa, \$outname)'\n\nwhere".
+	"\t\$infile.fa is the file to be deredundised\n".
 	"\t\$outname is the desired name of the resulting file\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
 
 	# Read the file into a matrix
@@ -462,42 +487,44 @@ sub deredundise_nr_fasta
 			if($cc==$#matrix)
 				{
 				$new_id = ">".$compseq."-".$comp_abund;
-                        	push(@new_matrix, [($new_id, $compseq)]);
+				push(@new_matrix, [($new_id, $compseq)]);
 				}
 			}
 		} # Loop over original matrix ends
 
 	# Print out the new matrix
 	fileTools::write_table_as_list(\@new_matrix, $outname);
-	}
+	} # end deredundise_nr_fasta
 
 
-# Given a list of sequence IDs (as a textfile with one ID on each line), retrieves the sequences of those IDs from a fasta file
-# and prints the selected IDs and sequences to a new fasta file of the specified name.
 sub get_seqs_from_fasta
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$ID_list.txt, \$fasta_file.fa, \$outname)'\n\nwhere".
+	{
+	# Given a list of sequence IDs (as a textfile with one ID on each line), retrieves the sequences of those IDs from a fasta file
+	# and prints the selected IDs and sequences to a new fasta file of the specified name.
+	
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$ID_list.txt, \$fasta_file.fa, \$outname)'\n\nwhere".
 	"\t\$ID_list.txt is a list of sequence IDs\n".
-        "\t\$fasta_file.fa is the fasta files to retrieve sequence from\n".
-        "\t\$outname is the desired name of the resulting fasta file\n\n";
+	"\t\$fasta_file.fa is the fasta files to retrieve sequence from\n".
+	"\t\$outname is the desired name of the resulting fasta file\n\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $id_list = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $id_list = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 	my $fasta_file = shift @pars or die $usage;
-        my $outname = shift @pars or die $usage;
+	my $outname = shift @pars or die $usage;
 
 	# Read the ID list into an array
 	my @ids=misc::read_list($id_list);
 	@ids = sort { $a cmp $b } @ids;
 
-        # Read the fasta file into a matrix
-        my @matrix=fastaTools::fasta_to_matrix($fasta_file);
+	# Read the fasta file into a matrix
+	my @matrix=fastaTools::fasta_to_matrix($fasta_file);
 
-        # Sort on matrix on ID
-        @matrix = sort { $a->[0] cmp $b->[0] } @matrix;
+	# Sort on matrix on ID
+	@matrix = sort { $a->[0] cmp $b->[0] } @matrix;
 
 	# Pick out the sequences of the listed IDs from the fasta file and write the selected IDs and sequences
 	# to a new fasta file
@@ -520,19 +547,22 @@ sub get_seqs_from_fasta
 
 	# Print the new @sel_matrix to a fasta outfile
 	fileTools::write_table_as_list(\@sel_matrix, $outname);
-        }
+	} # end get_seqs_from_fasta
 
-# Takes a fasta file as input, computes the length of each sequence in it, and returns a matrix where each row has two columns: a sequence identifier
-# and the corresponding length.
+
 sub get_seq_lengths_from_fasta
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
-        "\t\$infile.fa is an input file in fasta format\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	{
+	# Takes a fasta file as input, computes the length of each sequence in it, and returns a matrix where each
+	# row has two columns: a sequence identifier and the corresponding length.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile)'\n\nwhere".
+	"\t\$infile.fa is an input file in fasta format\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 
 	my @outmatrix=();
 	push(@outmatrix, [("Feature_ID", "length")]);
@@ -549,23 +579,29 @@ sub get_seq_lengths_from_fasta
 		}
 
         return(@outmatrix);
-        }
+	} # end get_seq_lengths_from_fasta
 
-# Aligns the sequence reads in a fasta file (the infile) to those in a different fasta file (the target) using Patman (Prüfer et al 2008), with a given number of mismatches allowed between
-# infile sequence and target sequence. Those reads from the infile that align to something in the target are removed from the infile. The original infile is preserved, and a new infile with
-# the preferred name is produced. The infile can be of either redundant ("r", i.e. '>id (linebreak) sequence'), non-redundant ("nr", i.e. '>sequence-abundance (linebreak) sequence')
-# or multi-non-redundant ("mnr", '>sequence_abundance1_abundance2_abundance3... (linebreak) sequence') format. Also specify the maximum the number of sequences that the infile can contain before
-# it gets split into smaller pieces before alignment, to save memory, and whether the infile, the outfile or both should be compressed after use.
+
 sub remove_alignment_target_from_fasta
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa, \$target.fa, \$mismatch, \$outname,".
+	{
+	# Aligns the sequence reads in a fasta file (the infile) to those in a different fasta file (the target) using Patman
+	# (Prüfer et al 2008), with a given number of mismatches allowed between infile sequence and target sequence. Those
+	# reads from the infile that align to something in the target are removed from the infile. The original infile is preserved,
+	# and a new infile with the preferred name is produced. The infile can be of either redundant ("r", i.e. '>id (linebreak)
+	# sequence'), non-redundant ("nr", i.e. '>sequence-abundance (linebreak) sequence') or multi-non-redundant ("mnr",
+	# '>sequence_abundance1_abundance2_abundance3... (linebreak) sequence') format. Also specify the maximum the number
+	# of sequences that the infile can contain before it gets split into smaller pieces before alignment, to save memory,
+	# and whether the infile, the outfile or both should be compressed after use.
+
+
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.fa, \$target.fa, \$mismatch, \$outname,".
 	" \$seqs_per_infile, \$infile_format, \$zip_in_out_all)'\n\nwhere".
-        "\t\$infile.fa is the fasta file that something should be removed from\n".
-        "\t\$target.fa is the fasta file to align the infile to\n".
+	"\t\$infile.fa is the fasta file that something should be removed from\n".
+	"\t\$target.fa is the fasta file to align the infile to\n".
 	"\t\$mismatch is the number of mismatches to allow in the alignment between infile and target\n".
-        "\t\$outname is the preferred name of the output file\n".
+	"\t\$outname is the preferred name of the output file\n".
 	"\t\$seqs_per_infile is the number of sequences that the infile can contain before it gets split into smaller pieces before alignment (the pieces will be put together again in the end)\n".
 	"\t\$infile format can be either 'r', 'nr' or 'mnr' (redundant, non-redundant, multi-non-redundant), where\n".
 	"\t\t'r' is 'redundant' i.e. '>id (linebreak) sequence'\n".
@@ -573,9 +609,9 @@ sub remove_alignment_target_from_fasta
 	"\t\t'mnr' is 'multi-non-redundant' i.e. '>sequence_abundance1_abundance2_abundance3... (linebreak) sequence'\n".
 	"\t\$zip_in_out_all is an indicator of whether either input or output files or both should be compressed after the script has finished (options are 'in', 'out' or 'all'. Default is no compression)\n";
 
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $infile = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $infile = shift @pars or die $usage;
 	my $target = shift @pars or die $usage;
 	my $mm = shift @pars or die $usage;
 	my $outname = shift @pars or die $usage;
@@ -637,11 +673,15 @@ sub remove_alignment_target_from_fasta
 
 	close($out);
 	#return($something);
-	}
+	} # end remove_alignment_target_from_fasta
 
-# Description of what the function does and how to use it
+
 sub fasta_from_patman
 	{
+	# Converts a patman alignmengt file to fasta format. Requires the sequence ids in the patman file to be of
+	# the format “ATATCTTGGTA-3”.
+
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$patfile, \$outname)'\n\nwhere".
@@ -680,8 +720,9 @@ sub fasta_from_patman
 	
 	my $num=scalar(@useqs);
 	print "\n$num\n";
-	}	
+	} # end fasta_from_patman
 	
+
 return(1);
 
 # end functions

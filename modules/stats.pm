@@ -1,23 +1,23 @@
 package stats;
 
-# sub rand_between($min, $max, $decimals)
-# sub rand_array($n, $min, $max, $decimals)
-# sub mean_above($arrayref, $abund_limit, $samp_limit)
-# sub mean($arrayref)
-# sub num_above_cutoff($arrayref, $cutoff)
-# sub median($arrayref)
-# sub min($arrayref)
-# sub max($arrayref)
-# sub variance($arrayref)
-# sub stdev($arrayref)
-# sub percentile($arrayref, $k)
-# sub ofc($array_ref1, $array_ref2)
-# sub list_overlap($array_ref1, $array_ref2);
-# sub geometric_mean($array_ref)
-# sub test_diff_expression_range($expression_matrix.csv, groups.txt, $outname)
-# sub geometric_mean($array_ref)
-# sub three_point_expr_pattern()
-# sub assign_ranks($array_ref, $num_or_char)
+# rand_between($min, $max, $decimals)
+# rand_array($n, $min, $max, $decimals)
+# mean_above($arrayref, $abund_limit, $samp_limit)
+# mean($arrayref)
+# num_above_cutoff($arrayref, $cutoff)
+# median($arrayref)
+# min($arrayref)
+# max($arrayref)
+# variance($arrayref)
+# stdev($arrayref)
+# percentile($arrayref, $k)
+# ofc($array_ref1, $array_ref2)
+# list_overlap($array_ref1, $array_ref2);
+# geometric_mean($array_ref)
+# test_diff_expression_range($expression_matrix.csv, groups.txt, $outname)
+# geometric_mean($array_ref)
+# three_point_expr_pattern()
+# assign_ranks($array_ref, $num_or_char)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -69,6 +69,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -78,33 +81,37 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Generates a random number between given values and with a given number of decimals
-# Parameters: $min, $max, $decimals
+
 sub rand_between
-        {
+	{
+	# Generates a random number between given values and with a given number of decimals
+	# Parameters: $min, $max, $decimals
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage = "Usage  error for sub '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$min, \$max, \$decimals);'\n\nwhere".
 	"\t\$min is the lower limit of the number to be returned\n".
 	"\t\$max is the upper limit of the number to be returned\n".
 	"\t\$decimals is the number of desired decimals of the returned number\n\n";
-        my $min = $_[0] or 0;
-        my $max = $_[1] or 0;
-        my $decimals = $_[2] or 0;
+	my $min = $_[0] or 0;
+	my $max = $_[1] or 0;
+	my $decimals = $_[2] or 0;
 
 	if($min eq "n")	{	$min = 0;	}
 	if($max eq "n") {       $max = 0;       }
 	if($decimals eq "n") {       $decimals = 0;       }
 
-        my $range = $max-$min;
-        my $num = rand($range);
-        $num = sprintf("%.${decimals}f", $num+$min);
-        return($num);
-        }
+	my $range = $max-$min;
+	my $num = rand($range);
+	$num = sprintf("%.${decimals}f", $num+$min);
+	return($num);
+	} # end rand_between
 
-# Generates an array with a given number ($n) of random numbers between given values ($min, $max) and with a given number of decimals ($decimals)
+
 sub rand_array
 	{
+	# Generates an array with a given number ($n) of random numbers between given values ($min, $max) and with a given number of decimals ($decimals)
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$n, \$min, \$max, \$decimals)'\n\nwhere".
@@ -133,13 +140,16 @@ sub rand_array
 		push(@array, $random_number);
 		}
 	
-        return(@array);
-	}
+	return(@array);
+	} # end rand_array
 
-# Takes an array of numbers and checks if they have a mean above a given cutoff, and if the number of those numbers that are above zero is larger than some given cutoff (e.g.
-# the mean must be above 22.14 and the number of non-zero samples must be at least 3). If the criteria are met the function returns "yes", else "no".
+
 sub mean_above
 	{
+	# Takes an array of numbers and checks if they have a mean above a given cutoff, and if the number of those numbers
+	# that are above zero is larger than some given cutoff (e.g. the mean must be above 22.14 and the number of non-zero
+	# samples must be at least 3). If the criteria are met the function returns "yes", else "no".
+
 	my $subname="mean_above";
 	my $usage="\nSyntax error for sub ${subname}. Correct usage: '\${packname}::\${subname}(\$arrayref, \$abund_limit, \$samp_limit)'\n\nwhere".
 	"\t\$arrayref is a reference to an array holding the numbers whose mean you want to check is above some limit\n".
@@ -163,11 +173,13 @@ sub mean_above
 	my $mean=$total/$samp_num;
 	if(($mean > $abund_limit) and ($above_0 >= $samp_limit))        {       return("yes");  }
 	else    {       return("no");   }
-	}
+	} # end mean_above
 
-# Calculates the arithmetic mean of an array of numbers
+
 sub mean
 	{
+	# Calculates the arithmetic mean of an array of numbers
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$numbers_array_ref)'\n\nwhere".
@@ -183,12 +195,14 @@ sub mean
 	my $mean = $sum/$n;
 	
 	return($mean);
-	}
+	} # end mean
 
-# Takes an array of numerical values and a numerical cutoff value, and returns the number of values that are larger than or equal to that cutoff, as well as the percentage of values
-# larger than or equal to the cutoff.
+
 sub num_above_cutoff
 	{
+	# Takes an array of numerical values and a numerical cutoff value, and returns the number of values that are
+	# larger than or equal to that cutoff, as well as the percentage of values larger than or equal to the cutoff.
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$numbers_array_ref, \$cutoff)'\n\nwhere".
@@ -210,42 +224,46 @@ sub num_above_cutoff
 	my $perc_above_cutoff = 100*($num_above_cutoff/scalar(@arr));
 	my @stats=($num_above_cutoff, $perc_above_cutoff);
 
-        return(@stats);
-	}
+	return(@stats);
+	} # end num_above_cutoff
 
-# Computes the median of a set of numbers
+
 sub median
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-        "\t\$arrayref is a reference to an array of numbers whose median should be computed\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	{
+	# Computes the median of a set of numbers
 	
-		my @arr=@{$arref};
-		my $num_obs=scalar(@arr);
-		@arr = sort { $a <=> $b } @arr;
-		my $median_index = ($num_obs/2)-1;	# -1 is because perl starts counting aray indices at 0 rather than 1
-		my $median=0;
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose median should be computed\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 
-		# If the number of observations is even
-		if(int($median_index) == $median_index)	{	$median = ($arr[$median_index]+$arr[1+$median_index])/2;	}
+	my @arr=@{$arref};
+	my $num_obs=scalar(@arr);
+	@arr = sort { $a <=> $b } @arr;
+	my $median_index = ($num_obs/2)-1;	# -1 is because perl starts counting aray indices at 0 rather than 1
+	my $median=0;
 
-		# If the number of observations is odd	
-		elsif(int($median_index) != $median_index)
-			{
-			$median_index = int($median_index)+1;
-			$median = $arr[$median_index];
-			}
+	# If the number of observations is even
+	if(int($median_index) == $median_index)	{	$median = ($arr[$median_index]+$arr[1+$median_index])/2;	}
 
-        return($median);
-        }
+	# If the number of observations is odd	
+	elsif(int($median_index) != $median_index)
+		{
+		$median_index = int($median_index)+1;
+		$median = $arr[$median_index];
+		}
 
-# Returns the minimum value of a set of numbers
+	return($median);
+	} # end median
+
+
 sub min
 	{
+	# Returns the minimum value of a set of numbers
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
@@ -263,40 +281,44 @@ sub min
 	my $min = shift(@arr);
 
 	return($min);
-	}
+	} # end min
 
-# Returns the maximum value of a set of numbers
+
 sub max
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-        "\t\$arrayref is a reference to an array of numbers whose maximum value should be returned\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	{
+	# Returns the maximum value of a set of numbers
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose maximum value should be returned\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
 
-        my @arr = @{$arref};
+	my @arr = @{$arref};
 
-        # Sort the array numerically
-        @arr = sort { $b <=> $a } @arr;
+	# Sort the array numerically
+	@arr = sort { $b <=> $a } @arr;
 
-        # Get the maximum value
-        my $max = shift(@arr);
+	# Get the maximum value
+	my $max = shift(@arr);
 
-        return($max);
-        }
+	return($max);
+	} # end max
 
-# Returns the variance of a set of numbers
+
 sub variance
 	{
+	# Returns the variance of a set of numbers
+	
 	# Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-        "\t\$arrayref is a reference to an array of numbers whose variance should be returned\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose variance should be returned\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;
 	
 	my @arr = @{$arref};
 	my $mean=stats::mean($arref);
@@ -312,49 +334,55 @@ sub variance
 	my $n = (scalar(@arr))-1;
 	my $variance=0;
 	unless($n==0)	{	$variance = $sum_of_squares/$n;	}
-        return($variance);
-	}
+	return($variance);
+	} # end variance
 
-# Returns the standard deviation of a set of numbers
+
 sub stdev
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-        "\t\$arrayref is a reference to an array of numbers whose standard deviation should be returned\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	{
+	# Returns the standard deviation of a set of numbers
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose standard deviation should be returned\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;     
 
-        my @arr = @{$arref};
+	my @arr = @{$arref};
 	my $variance=stats::variance($arref);
 	my $stdev = sqrt($variance);
 
-        return($stdev);
-        }
+	return($stdev);
+	} # end stdev
 
-# Returns a string representing the range of a set of numbers in the format "start_stop"
+
 sub range_string
-        {
-        # Set error messages and accept input parameters
-        my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-        my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-        "\t\$arrayref is a reference to an array of numbers whose range should be returned\n\n";
-        my @pars = @_ or die $usage;
-        foreach my $el (@pars)  {       $el = text::trim($el);  }
-        my $arref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	{
+	# Returns a string representing the range of a set of numbers in the format "start_stop"
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose range should be returned\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref = shift @pars or die $usage;
 
-        my @arr = @{$arref};
+	my @arr = @{$arref};
 	my $min=stats::min($arref);
 	my $max=stats::max($arref);
 	my $range = $min."_".$max;
 
-        return($range);
-        }	
+	return($range);
+	} # end range_string
 
-# Computes the k:th percentile of a set of numbers
+
 sub percentile
 	{
+	# Computes the k:th percentile of a set of numbers
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref, \$k)'\n\nwhere".
@@ -388,11 +416,13 @@ sub percentile
 	my $percentile = $arr[$index];
 
 	return($percentile);	
-	}
+	} # end percentile
 
-# Compares two sets of numbers by computing an offset fold change bewteen them
+
 sub ofc
 	{
+	# Compares two sets of numbers by computing an offset fold change bewteen them
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference_1, \$array_reference_2, \$offset)'\n\nwhere".
@@ -428,11 +458,13 @@ sub ofc
 		}
 	else	{	$ofc = 0;	}
 	return($ofc);
-	}
+	} # end ofc
 
-# Compares two lists and returns the elements they have in common
+
 sub list_overlap
 	{
+	# Compares two lists and returns the elements they have in common
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_reference_1, \$array_reference_2)'\n\nwhere".
@@ -457,27 +489,28 @@ sub list_overlap
 		}
 
 	return(@common);
-	}
+	} # end list_overlap
 
 
-# Tests differential expression of genes between groups of samples in an RNAseq experiment, based on non-overlap of the ranges of expression
-# for individual genes between groups of samples. Takes as input a normalised expression matrix in csv format and a csv file listing each sample
-# to be included in the ananlysis and the groups to which these samples belong. It also needs to list the group-group comparisons to be made. Example
-# of required format:
-#
-#        sample1,groupA
-#        sample2,groupA
-#        sample3,groupB
-#        sample4,groupB
-#        sample5,groupC
-#        sample6,groupC
-#        groupA_vs_groupB
-#        groupA_vs_groupC
-#        groupB_vs_groupC
-#
-# Outputs a new expression matrix with columns for offset fold change (OFC) and significance of OFC for each group-group comparison added.
 sub test_diff_expression_range
 	{
+	# Tests differential expression of genes between groups of samples in an RNAseq experiment, based on non-overlap of the ranges of expression
+	# for individual genes between groups of samples. Takes as input a normalised expression matrix in csv format and a csv file listing each sample
+	# to be included in the ananlysis and the groups to which these samples belong. It also needs to list the group-group comparisons to be made. Example
+	# of required format:
+	#
+	#        sample1,groupA
+	#        sample2,groupA
+	#        sample3,groupB
+	#        sample4,groupB
+	#        sample5,groupC
+	#        sample6,groupC
+	#        groupA_vs_groupB
+	#        groupA_vs_groupC
+	#        groupB_vs_groupC
+	#
+	# Outputs a new expression matrix with columns for offset fold change (OFC) and significance of OFC for each group-group comparison added.
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$expression_matrix.csv, \$groups.csv, \$offset, \$header_y_n, \$outname)'\n\nwhere".
@@ -601,18 +634,20 @@ sub test_diff_expression_range
 		$splice_here = $splice_start;		
 		push(@new_matrix, [@arr]);
 
-        	} # Loop over genes ends
+        } # Loop over genes ends
 
 	# Add @new_header to @new_matrix
 	unshift(@new_matrix, \@new_header);
 
 	# Print the new matrix to an outfile
 	fileTools::write_table(\@new_matrix, "csv", $outname, "lin");
-	}
+	} # end test_diff_expression_range
 
-# Returns the geometric mean of an array of numbers
+
 sub geometric_mean
 	{
+	# Returns the geometric mean of an array of numbers
+	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_ref)'\n\nwhere".
@@ -627,13 +662,15 @@ sub geometric_mean
 	for(my $cc=0; $cc<=$#arr; $cc++)	{	$product = $product*$arr[$cc];	}
 	my $geomean = $product**(1/$n);
 	return($geomean);
-	}
+	} # end geometric_mean
 
-# Takes an analysed expression matrix and and adds a column for three-point expression pattern class. Requires the matrix to have a header with, for each
-# differential expression comparison (bewteen treatment groups/conditions) made, two columns; one for statistical significance and one for offset fold change.
-# The labels of these columns must contain the text "_sign" and "_OFC" respectively (that is how the function knows which values to use when looking for patterns).
+
 sub three_point_expr_pattern
 	{
+	# Takes an analysed expression matrix and and adds a column for three-point expression pattern class. Requires the matrix to have a header with, for each
+	# differential expression comparison (bewteen treatment groups/conditions) made, two columns; one for statistical significance and one for offset fold change.
+	# The labels of these columns must contain the text "_sign" and "_OFC" respectively (that is how the function knows which values to use when looking for patterns).
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$infile.csv, \$ofc_cutoff, \$outname)'\n\nwhere".
@@ -756,14 +793,16 @@ sub three_point_expr_pattern
 	
 	unshift(@matrix, \@header);
 	fileTools::write_table(\@matrix, "csv", $outname, "lin");
-    }
+    } # end three_point_expr_pattern
 
-# This function takes (a reference to) an array of values, sorts them in ascending order and assigns ranks to them. If there are tied values in
-# the input array, the mean rank of the values in a group of tied values can be assigned to those values. Set argument $adjust_ties_y_n to 'y'
-# if you want this, or to 'n' if you want to use the original , unadjusted ranks. The function returns an array of the ranks in the original order
-# of elements in the input array. If your array has numeric values, set argument $num_or_char to "num", otherwise to "char".
+
 sub assign_ranks
 	{
+	# This function takes (a reference to) an array of values, sorts them in ascending order and assigns ranks to them. If there are tied values in
+	# the input array, the mean rank of the values in a group of tied values can be assigned to those values. Set argument $adjust_ties_y_n to 'y'
+	# if you want this, or to 'n' if you want to use the original , unadjusted ranks. The function returns an array of the ranks in the original order
+	# of elements in the input array. If your array has numeric values, set argument $num_or_char to "num", otherwise to "char".
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$array_ref, \$adjust_ties_y_n, \$num_or_char)'\n\nwhere".
@@ -919,8 +958,9 @@ sub assign_ranks
 		}
 	
 	return(@outranks);
-	}
-	
+	} # end assign_ranks
+
+
 return(1);
 
 # end functions

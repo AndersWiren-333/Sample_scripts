@@ -1,8 +1,8 @@
 package db;
 
-# sub select($matrixref, $sortkey, $col, $value);
-# sub union($arref1, $arref2, $num_or_char);
-# sub intersection($arref1, $arref2, $num_or_char);
+# select($matrixref, $sortkey, $col, $value);
+# union($arref1, $arref2, $num_or_char);
+# intersection($arref1, $arref2, $num_or_char);
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -54,6 +54,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -63,11 +66,15 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# This function takes a (reference to a) matrix ('$matrixref) and selects values from a specified column ($sortkey) for rows where another column ($col) has a specific value
-# ($value). $value can be either numeric or text (set $num_or_char to 'num' or 'char') returns an array with the selected values. If the input matrix has a header, set
-# $header_y_n to "y", otherwise to "n".
+
 sub select
 	{
+	# This function takes a (reference to a) matrix ('$matrixref) and selects values from a specified column
+	# ($sortkey) for rows where another column ($col) has a specific value ($value). $value can be either
+	# numeric or text (set $num_or_char to 'num' or 'char') returns an array with the selected values. If
+	# the input matrix has a header, set $header_y_n to "y", otherwise to "n".
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$matrixref, \$sortkey, \$col, \$value, \$num_or_char, \$header_y_n)'\n\nwhere".
@@ -105,12 +112,15 @@ sub select
 		}
 	
 	return(@outarr);
-	}
+	} # end select
 
-# Takes (references to) two arrays as input returns the union of their elements, i.e. it combines the two arrays into one and then removes duplicate
-# elements from it.
+
 sub union
 	{
+	# Takes (references to) two arrays as input returns the union of their elements, i.e. it combines
+	# the two arrays into one and then removes duplicate elements from it.
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arref1, \$arref2, \$num_or_char)'\n\nwhere".
@@ -133,12 +143,15 @@ sub union
 	my @unique_array=misc::unique_list(\@new_arr, $num_or_char);
 
 	return(@unique_array);
-	}	
+	} # end union
 	
-	
-# Takes (references to) two arrays as input returns the intersection of their elements, i.e. it finds which elements thw two arrays have in common and returns them as an array.
+
 sub intersection
 	{
+	# Takes (references to) two arrays as input returns the intersection of their elements, i.e. it finds
+	# which elements thw two arrays have in common and returns them as an array.
+
+
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arref1, \$arref2, \$num_or_char)'\n\nwhere".
@@ -170,7 +183,9 @@ sub intersection
 		}
 
 	return(@intersection);
-	}	
+	} # end intersection
+	
+
 return(1);
 
 # end functions

@@ -1,6 +1,6 @@
 package envir;
 
-# sub timestamp()
+# timestamp()
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -52,6 +52,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -61,18 +64,19 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-sub timestamp
-        {
-		# Create a timestamp
-		my ($sec,$min,$hour,$mday,$month,$year,$wday,$yday,$isdst) = localtime(time);
-		$year=$year+1900;
-		$month=$month+1;
-		if($month<10)   {       $month = "0"."$month";  }
-		if($mday<10)   {       $mday = "0"."$mday";  }
-		my $timestamp = "$year"."-"."$month"."-"."$mday"."_"."$hour"."-"."$min"."-"."$sec";
 
-		return($timestamp);
-        }
+sub timestamp
+	{
+	# Create a timestamp
+	my ($sec,$min,$hour,$mday,$month,$year,$wday,$yday,$isdst) = localtime(time);
+	$year=$year+1900;
+	$month=$month+1;
+	if($month<10)   {       $month = "0"."$month";  }
+	if($mday<10)   {       $mday = "0"."$mday";  }
+	my $timestamp = "$year"."-"."$month"."-"."$mday"."_"."$hour"."-"."$min"."-"."$sec";
+
+	return($timestamp);
+	} # end timestamp
 	
 return(1);
 
