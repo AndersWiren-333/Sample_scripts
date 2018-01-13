@@ -1,0 +1,26 @@
+file=maintenance/commit_to_other_repo.pl
+mode=add
+
+--Apply to these repositories
+repo=C:/Users/Anders/Documents/01_Scripts/Anders_personal_scripts
+repo=C:/Users/Anders/Documents/01_Scripts/RNAseq_pipeline_scripts
+--end_repositories
+
+--message
+Added writing maintenance/commit_to_other_repo.pl
+
+It propagates a commit to other specified repositories using information
+in "commit_messages.txt".
+--end_message
+
+
+Wrote and tested perl subroutine matrixTools::add_seq_lengths_to_matrix_from_fasta
+
+It takes a matrix where each row represents a genomic feature and computes adds as a column the length of the sequences corresponding to
+each feature (computed from a specified fasta file).
+Usage information has been added to Scripts_and_functions.xlsx
+
+Updated perl subroutine normalise::length_normalise_matrix
+
+It now uses indexing of matrix columns starting at 1 (previously it started at 0, which is a number that can't be used
+as an input parameter for scripts and subroutines).
