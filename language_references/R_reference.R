@@ -19,7 +19,7 @@ date=Sys.Date()
 myFunction <- function(argument1=3, argument2=4)
 	{
     # This is a template function
-    # It takes two numbers as arguments (default valuea are 3 and 4) and returns the sum of them
+    # It takes two numbers as arguments (default values are 3 and 4) and returns the sum of them
     # Usage: myFunction(argument1, argument2)
     result <- argument1+argument2
     return(result)
@@ -39,7 +39,7 @@ for(scalar in vector)
 if((1>0) & (3==3))
   {
   print("Hej")
-  } else {          # It is important that both braces and the "else" is on the same line
+  } else {          # It is important that both braces and the "else" are on the same line
   print("Då")
   }
 
