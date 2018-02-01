@@ -619,7 +619,7 @@ sub sync_genelists_on_sortkey
 
 sub apply
 	{
-	# Applies a function (mean, median, min, max) to all rows ($row_or_col=”row”) or columns ($row_or_col=”col”)
+	# Applies a function ('mean', 'median', 'min', 'max', 'geomean' (geometric mean), 'stdev', 'variance') to all rows ($row_or_col=”row”) or columns ($row_or_col=”col”)
 	# in a matrix and returns the resulting values as an array.
 	
 	# Set error messages
