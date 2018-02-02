@@ -5,7 +5,7 @@ This is a small collection of scripts (Perl, R and SQL) and modules to give an e
 have done in the past. Most Perl and R scripts/modules are part of a pipeline for differential
 gene expression analysis based on RNAseq data, but for licensing reasons not all parts of the
 pipeline can be published here at this time. The SQL scripts are a few samples of work I did
-do query and modify MySQL databases that were the output of a pipeline ("Stacks") for SNP discovery
+to query and modify MySQL databases that were the output of a pipeline ("Stacks") for SNP discovery
 based on RADseq data.
 
 *Repository structure*
