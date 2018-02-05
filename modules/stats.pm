@@ -13,11 +13,11 @@ package stats;
 # percentile($arrayref, $k)
 # ofc($array_ref1, $array_ref2)
 # list_overlap($array_ref1, $array_ref2);
-# geometric_mean($array_ref)
 # test_diff_expression_range($expression_matrix.csv, groups.txt, $outname)
 # geometric_mean($array_ref)
 # three_point_expr_pattern()
 # assign_ranks($array_ref, $num_or_char)
+# covariance($array_ref1, $array_ref2)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -961,6 +961,48 @@ sub assign_ranks
 	} # end assign_ranks
 
 
+sub covariance
+	{
+	# Computes the covariance between two sets of numbers (specified as array references). The two sets must have the same number of numbers.
+
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2)'\n\nwhere".
+	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref1 = shift @pars or die $usage;
+	my $arref2 = shift @pars or die $usage;	
+
+	my @arr1 = @{$arref1};
+	my @arr2 = @{$arref2};
+	
+	# Get the means of the two sets of numbers
+	my $mean1=stats::mean($arref1);
+	my $mean2=stats::mean($arref2);
+	
+	# Compute the degrees of freedom
+	my $df = (scalar(@arr1))-1;
+
+	# Loop over numbers in the two sets and compute products of deviations
+	my $sum_of_products=0;
+	
+	for(my $cc=0; $cc<=$#arr1; $cc++)
+		{
+		my $dev1 = $arr1[$cc] - $mean1;
+		my $dev2 = $arr2[$cc] - $mean2;
+		my $product = $dev1 * $dev2;
+		$sum_of_products = $sum_of_products + $product;
+		}
+	
+	# Divide the sum of products by the degrees of freedom
+	my $covariance = $sum_of_products/$df;
+	
+	return($covariance);
+	} # end covariance
+	
 return(1);
 
 # end functions
