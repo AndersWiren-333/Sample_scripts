@@ -18,6 +18,7 @@ package stats;
 # three_point_expr_pattern()
 # assign_ranks($array_ref, $num_or_char)
 # covariance($array_ref1, $array_ref2)
+# corr_coeff($array_ref1, $array_ref2)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -310,15 +311,18 @@ sub max
 
 sub variance
 	{
-	# Returns the variance of a set of numbers
-	
+	# Returns the variance of a set of numbers, specified as an array reference. Also specify whether to compute
+	# the sample variance (set $samp_or_pop = “samp”) or the population variance ( $samp_or_pop = “pop”).
+
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-	"\t\$arrayref is a reference to an array of numbers whose variance should be returned\n\n";
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref, \$samp_or_pop)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose variance should be returned\n".
+	"\t\$samp_or_pop is an indicator of whether the sample or population variance should be computed\n\n";
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $arref = shift @pars or die $usage;
+	my $samp_or_pop = shift @pars or die $usage;
 	
 	my @arr = @{$arref};
 	my $mean=stats::mean($arref);
@@ -331,7 +335,14 @@ sub variance
 		$sum_of_squares += $square;
 		}
 
-	my $n = (scalar(@arr))-1;
+	my $n=0;
+	if($samp_or_pop eq "samp")	{	$n = (scalar(@arr))-1;	}
+	elsif($samp_or_pop eq "pop")	{	$n = scalar(@arr);	}
+	else
+		{
+		die "Parameter $samp_or_pop for subroutine $subname (called by script '${calling_script}', line ${calling_line}) ".
+		"needs to be either 'samp' or 'pop'. Check that it is!\n";
+		}
 	my $variance=0;
 	unless($n==0)	{	$variance = $sum_of_squares/$n;	}
 	return($variance);
@@ -344,14 +355,21 @@ sub stdev
 	
 	# Set error messages and accept input parameters
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref)'\n\nwhere".
-	"\t\$arrayref is a reference to an array of numbers whose standard deviation should be returned\n\n";
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref, \$samp_or_pop)'\n\nwhere".
+	"\t\$arrayref is a reference to an array of numbers whose standard deviation should be returned\n".
+	"\t\$samp_or_pop is an indicator of whether the sample or population standard deviation should be computed\n\n";
 	my @pars = @_ or die $usage;
-	foreach my $el (@pars)  {       $el = text::trim($el);  }
-	my $arref = shift @pars or die $usage;     
+	foreach my $el (@pars)  {	$el = text::trim($el);  }
+	my $arref = shift @pars or die $usage; 
+	my $samp_or_pop = shift @pars or die $usage;
+	unless(($samp_or_pop eq "samp") or ($samp_or_pop eq "pop"))
+		{
+		die "Parameter $samp_or_pop for subroutine $subname (called by script '${calling_script}', line ${calling_line}) ".
+		"needs to be either 'samp' or 'pop'. Check that it is!\n";
+		}
 
 	my @arr = @{$arref};
-	my $variance=stats::variance($arref);
+	my $variance=stats::variance($arref, $samp_or_pop);
 	my $stdev = sqrt($variance);
 
 	return($stdev);
@@ -1002,6 +1020,35 @@ sub covariance
 	
 	return($covariance);
 	} # end covariance
+	
+
+sub corr_coeff
+	{
+	# Computes the correlation coefficient between two sets of numbers (specified as array references). The two sets must have the same number of numbers.
+	# Currently, the Product Moment Correlation Coefficient is the one returned, but more options (Pearson, Spearman etc.) should be added in the future.
+
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2)'\n\nwhere".
+	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref1 = shift @pars or die $usage;
+	my $arref2 = shift @pars or die $usage;	
+	#my $type = shift @pars or die $usage;
+	my $type = "pmcc";
+
+	my @arr1 = @{$arref1};
+	my @arr2 = @{$arref2};
+	
+	
+	
+
+	
+	#return($covariance);
+	} # end corr_coeff
 	
 return(1);
 
