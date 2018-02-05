@@ -1,5 +1,5 @@
 # DESCRIPTION: This script calculates distances between exons in annotated genes, using positional information from a genome annotation file (in gff format). It estimates statistics such
-# as mean, median and standard deviation for exon distance, both starnd specifically and overall.
+# as mean, median and standard deviation for exon distance, both strand specifically and overall.
 # end description
 
 ########################################## Universal perl script header ##########################################
@@ -32,7 +32,7 @@ my $modules = $scripts;
 $modules =~ s/\/scripts/\/modules/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
-# another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
+# another part of your system), set the absolute path to repository scripts and modules (that this script may depend on) here (and comment out
 # the lines for seeting paths above). Otherwise, keep the lines below commented out.
 #my $modules = "path/to/modules/folder";
 #my $scripts = "path/to/scripts/folder";
@@ -51,6 +51,8 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -74,7 +76,7 @@ my $rscript = "Rscript";
 # Declare local functions (if any)
 
 # Define usage (error message to display if the user enters the wrong arguments at the command line)
-my $usage = "Usage error for script ${0}. Correct usage: 'perl $0 \$infile'\n\nwhere".
+my $usage = "Usage error for script ${0}. Correct usage: 'perl $0 \$infile \$ex_neg'\n\nwhere".
 "\t\$infile is the annotation file (in gff format) that should be used as input\n".
 "\t\$ex_neg is an indicator of whether to exclude genes (RNAs) that have overlapping exons (which produce negative intron lengths. Options are 'y' and 'n')\n\n";
 my @pars = @ARGV or die $usage;
@@ -343,7 +345,7 @@ print($out "Standard deviation: $stdev_neg\n");
 print($out "2*Standard deviation: $two_stdev_neg\n");
 print($out "\n\n");
 
-#print("Negatives: pos: $num_neg_pos\tneg: $num_neg_neg\n");
+print("Negatives: pos: $num_neg_pos\tneg: $num_neg_neg\n");
 
 close($out);
 #close($wlog);
