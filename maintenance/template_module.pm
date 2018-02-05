@@ -53,6 +53,9 @@ require "$modules/text.pm";
 require "$modules/fileTools.pm";
 require "$modules/combinatorics.pm";
 require "$modules/db.pm";
+require "$modules/normalise.pm";
+require "$modules/listTools.pm";
+
 
 # Create a timestamp string (can be attached to the name of logfiles, for example
 my $timestamp = envir::timestamp();
@@ -62,9 +65,11 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Description of what the function does and how to use it
+
 sub sub_1
 	{
+	# Description of what the function does and how to use it
+	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
 	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$argument1, \$argument2, \@arguments3)'\n\nwhere".
@@ -85,7 +90,7 @@ sub sub_1
 	close($in);
 	close($out);
 	return($something);
-	}
+	} # end sub_1
 	
 return(1);
 
