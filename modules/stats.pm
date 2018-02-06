@@ -982,17 +982,20 @@ sub assign_ranks
 sub covariance
 	{
 	# Computes the covariance between two sets of numbers (specified as array references). The two sets must have the same number of numbers.
+	# Specify whether the sample or population covariance should be computed (set $samp_or_pop to ‘samp’ or ‘pop’ respectively).
 
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2)'\n\nwhere".
-	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n\n";
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2, \$samp_or_pop)'\n\nwhere".
+	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n".
+	"\t\$samp_or_pop is an indicator of whether the sample (set to 'samp') or population (set to 'pop') covariance should be computed\n\n";
 	
 	# Accept input parameters
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $arref1 = shift @pars or die $usage;
-	my $arref2 = shift @pars or die $usage;	
+	my $arref2 = shift @pars or die $usage;
+	my $samp_or_pop = shift @pars or die $usage;
 
 	my @arr1 = @{$arref1};
 	my @arr2 = @{$arref2};
@@ -1002,7 +1005,14 @@ sub covariance
 	my $mean2=stats::mean($arref2);
 	
 	# Compute the degrees of freedom
-	my $df = (scalar(@arr1))-1;
+	my $df=0;
+	if($samp_or_pop eq "samp")	{	$df = (scalar(@arr1))-1;	}
+	elsif($samp_or_pop eq "pop")	{	$df = scalar(@arr1);	}
+	else
+		{
+		die "Parameter \$samp_or_pop for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}) ".
+		"needs to be either 'samp' or 'pop'. Please check that it is.\n"
+		}
 
 	# Loop over numbers in the two sets and compute products of deviations
 	my $sum_of_products=0;
@@ -1025,29 +1035,44 @@ sub covariance
 sub corr_coeff
 	{
 	# Computes the correlation coefficient between two sets of numbers (specified as array references). The two sets must have the same number of numbers.
-	# Currently, the Product Moment Correlation Coefficient is the one returned, but more options (Pearson, Spearman etc.) should be added in the future.
+	# Specify whether the sample or population correlation coefficient should be computed (set $samp_or_pop to ‘samp’ or ‘pop’ respectively).
+	# Currently, the Pearson Product Moment Correlation Coefficient is the one returned, but more options (e.g. Spearman) should be added in the future.
 
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2)'\n\nwhere".
-	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n\n";
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$arrayref1, \$arrayref2, \$samp_or_pop)'\n\nwhere".
+	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n".
+	"\t\$samp_or_pop is an indicator of whether the sample (set to 'samp') or population (set to 'pop') correlation coefficient should be computed\n\n";
 	
 	# Accept input parameters
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $arref1 = shift @pars or die $usage;
-	my $arref2 = shift @pars or die $usage;	
+	my $arref2 = shift @pars or die $usage;
+	my $samp_or_pop = shift @pars or die $usage;
 	#my $type = shift @pars or die $usage;
 	my $type = "pmcc";
 
 	my @arr1 = @{$arref1};
 	my @arr2 = @{$arref2};
+	my $corr_coeff = 0;
 	
+	if($type eq "pmcc")
+		{
+		my $stdev1=stats::stdev($arref1, $samp_or_pop);
+		my $stdev2=stats::stdev($arref2, $samp_or_pop);
+		my $denominator = $stdev1 * $stdev2;
+		my $covariance=stats::covariance($arref1, $arref2, $samp_or_pop);
+		
+		print "stdev1 = $stdev1\n";
+		print "stdev2 = $stdev2\n";
+		print "stdev product = $denominator\n";
+		print "covariance = $covariance\n";
+		
+		$corr_coeff = $covariance/$denominator;
+		}
 	
-	
-
-	
-	#return($covariance);
+	return($corr_coeff);
 	} # end corr_coeff
 	
 return(1);
