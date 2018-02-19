@@ -16,11 +16,11 @@ rest_of_parameters=argu[2:length(arguments)]
 date=Sys.Date()
 
 # Declare and define a function (forward declaration - declaring first and defining at the end - is not available in R. I think)
-myFunction <- function(argument1=3, argument2=4)
+functionName <- function(argument1=3, argument2=4)
 	{
     # This is a template function
     # It takes two numbers as arguments (default values are 3 and 4) and returns the sum of them
-    # Usage: myFunction(argument1, argument2)
+    # Usage: functionName(argument1, argument2)
     result <- argument1+argument2
     return(result)
 	}
@@ -30,10 +30,14 @@ vector <- c(1,2,3,4,5)
 sequence <- seq(5)
 
 # For loop
-for(scalar in vector)
+for(i in 1:5)
 	{
-    print(scalar)
+    print(i)
 	}
+	
+# While loop
+
+# For each loop
 
 # Conditional statement
 if((1>0) & (3==3))
@@ -54,7 +58,8 @@ dev.off()       # This closes the pdf
 plot(vector)
 boxplot(vector)
 stripchart(vector)
-    
+hist(vector)
+   
 # Run an R script from the command line
 Rscript script.R
 
