@@ -1075,6 +1075,47 @@ sub corr_coeff
 	return($corr_coeff);
 	} # end corr_coeff
 	
+sub pearson_corr
+	{
+	# Computes the Pearson Product Moment Correlation Coefficient between two sets of numbers (specified as array references). The two sets must have
+	# the same number of numbers. Specify whether the sample or population correlation coefficient should be computed (set $samp_or_pop to ‘samp’
+	# or ‘pop’ respectively).
+
+	# Set error messages
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage1="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}).\n";
+	my $usage2 = "Correct usage: '${subname}(\$arrayref1, \$arrayref2, \$samp_or_pop)'\n\nwhere".
+	"\t\$arrayref1, \$arrayref2 are references to the two arrays (lists) holding the numbers to be used in the computation\n".
+	"\t\$samp_or_pop is an indicator of whether the sample (set to 'samp') or population (set to 'pop') correlation coefficient should be computed\n\n";
+	
+	# Accept input parameters
+	my @pars = @_ or die $usage1, $usage2;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $arref1 = shift @pars or die $usage1, $usage2;
+	my $arref2 = shift @pars or die $usage1, $usage2;
+	my $samp_or_pop = shift @pars or die $usage1, $usage2;
+	my @arr1 = @{$arref1};
+	my @arr2 = @{$arref2};
+	
+	# Assert that input parameters are valid
+	if(scalar(@arr1) != scalar(@arr2))	{	die $usage1, "The two input arrays must be of equal length\n";	}
+	unless(listTools::value_in_array($samp_or_pop, ["samp", "pop"], "char"))	{	die $usage1, "Parameter \$samp_or_pop must be either 'samp' or 'pop'\n";	}
+
+	my $corr_coeff = 0;
+	
+	my $stdev1=stats::stdev($arref1, $samp_or_pop);
+	my $stdev2=stats::stdev($arref2, $samp_or_pop);
+	my $denominator = $stdev1 * $stdev2;
+	my $covariance=stats::covariance($arref1, $arref2, $samp_or_pop);
+	
+	$corr_coeff = $covariance/$denominator;
+	
+	print "\n\t$corr_coeff\n";
+			
+	return($corr_coeff);
+	} # end pearson_corr
+
+
 return(1);
 
 # end functions
