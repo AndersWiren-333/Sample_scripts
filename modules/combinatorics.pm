@@ -245,40 +245,6 @@ sub remove_redundant_combinations
 	} # end remove_redundant_combinations
 
 
-sub value_in_array
-	{
-	# Checks whether a value (supplied as a scalar) is present in array (supplied as an array reference)
-	# or not. Returns “y” if it is and “n” if it isn’t. Set argument $num_or_char to ‘num’ if the value
-	# and array are numeric or ‘to char’ if they are text.
-
-
-	# Set error messages
-	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$value, \$arrayref, \$num_or_char)'\n\nwhere".
-	"\t\$value is the value whose presence in the array should be checked\n".
-	"\t\$arrayref is a reference to the array in which the presence of \$value should be checked\n".
-	"\t\$num_or_char  Set this to 'num' if the \$value and \@array are numeric, or 'char' if they are text\n\n";
-	
-	# Accept input parameters
-	my @pars = @_ or die $usage;
-	foreach my $el (@pars)  {       $el = text::trim($el);  }
-	my $value = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
-	my $arref = shift @pars or die $usage;
-	my $num_or_char = shift @pars or die $usage;
-
-	my @arr = @{$arref};
-	
-	# Loop over elements in @arr and check if they corresponds to $value
-	my $y_or_n = "n";
-
-	LINES: for(my $c=0; $c<=$#arr; $c++)
-		{
-		if($num_or_char eq "num")	{	if($arr[$c] == $value)	{	$y_or_n = "y"; last LINES;	}	}
-		elsif($num_or_char eq "char")	{	if($arr[$c] eq $value)	{	$y_or_n = "y"; last LINES;	}	}
-		}
-
-	return($y_or_n);
-	} # end value_in_array
 	
 
 sub array_in_array
