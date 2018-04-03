@@ -78,6 +78,130 @@ sub timestamp
 	return($timestamp);
 	} # end timestamp
 	
+sub check_arg
+	{
+	# Validates user input to scripts and functions. Returns false if everything is ok, and an error message otherwise.
+	# (The decision to terminate processing lies in the script that calls this subroutine, rather than in the subroutine
+	# itself).
+	
+	# Usage: subname($argument, [allowed_type1, allowed_type2, ...], [allowed_value1, allowed_value2, ...]);
+	
+	# Input parameters:
+	
+	# $argument	=	the argument that should be validated. If argument is 0, set to 'zero'
+	# allowed_type		=	the argument's type. Options: "arrayref", "matrixref", "string", "number"
+	# allowed_value		=	a value that the argument can take. If not relevant, leave blank
+	
+	
+	# Set usage message
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $sub_and_caller = "'${subname}' (called by script '${calling_script}', line ${calling_line})";
+	my $usage="\nUsage error for subroutine $sub_and_caller\n".
+	"Correct usage: '${subname}(\$argument, [allowed_type1, allowed_type2,...], [allowed_value1, allowed_value2,...])'\n\nwhere".
+	
+	"\targument\t=\tthe argument that should be validated. If argument is 0, set to 'zero'\n".
+	"\tallowed_type\t=\tthe argument's type. Options: 'char', 'num', 'arrayref', 'matrixref', 'hashref'\n".
+	"\tallowed_value\t=\ta value that the argument can take. If not relevant, leave blank\n\n)";
+
+	# Read input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	
+	my $argument = shift @pars or die $usage;
+	my $type_options_ref = shift @pars or die $usage;
+	my $value_options_ref = shift @pars or 0;
+	
+	# Process parameters
+	my $message = "";
+	my @type_options = @{$type_options_ref};
+	my @value_options;
+	if($value_options_ref)	{	@value_options = @{$value_options_ref};	}		# If the user has supplied allowed values, put them in an array
+	
+	my $dec=`perl -MPOSIX=locale_h -e "print localeconv()->{decimal_point}`;	# Get the decimal separator for the current system
+	
+	# Check that the argument's type is one those allowed
+	my $argtype=misc::type($argument);
+	if($argument eq "zero")	{	$argtype = "num";	}
+	if(not listTools::value_in_array($argtype, $type_options_ref, "char"))	{	$message = "The argument has type $argtype, but the allowed types are (@type_options)";	}
+	
+	# If type is ok, check allowed values
+	else
+		{
+		# Check that the argument's value is one of those allowed (if specified)
+		if($value_options_ref)
+			{
+			# If the argument is a string
+			if($argtype eq "char")
+				{
+				unless(listTools::value_in_array($argument, $value_options_ref, "char"))	{	$message = "The argument has value \"$argument\", but the allowed values are \"@value_options\"";	}
+				}
+				
+			# Else, if the argument is numeric
+			elsif($argtype eq "num")
+				{
+				if($argument eq "zero")	{	$argument = 0;	}
+				
+				# If the allowed values are equalities/inequalities
+				my $equality;
+				foreach my $element (@value_options)	{	if($element =~ /[<>=]/)	{	$equality="y";	}	}
+				
+				if($equality)
+					{
+					my $numopts=scalar(@value_options);
+					my $numok=0;
+					my $op;
+					my $number;
+					foreach my $el (@value_options)
+						{
+						if($el =~ /^([<>=]{1,2})(\s*)([+-]?[1234567890]+[$dec]?[1234567890]*e?[+-]?[1234567890]*)$/)
+							{
+							$op = $1;
+							$number = $3;
+							
+							# Check if the argument value satisfies the equality/inequality
+							if($op eq "<")
+								{
+								if($argument < $number)	{	$numok++;	}
+								else	{	$message = "The argument has value $argument, but needs to be less than $number\n";	}
+								}
+							if($op eq ">")
+								{
+								if($argument > $number)	{	$numok++;	}
+								else	{	$message = "The argument has value $argument, but needs to be greater than $number\n";	}
+								}
+							if($op eq "<=")
+								{
+								if($argument <= $number)	{	$numok++;	}
+								else	{	$message = "The argument has value $argument, but needs to be less than or equal to $number\n";	}
+								}
+							if($op eq ">=")
+								{
+								if($argument >= $number)	{	$numok++;	}
+								else	{	$message = "The argument has value $argument, but needs to be greater than or equal to $number\n";	}
+								}
+							
+							}
+						else
+							{	
+							die "Error in subroutine $sub_and_caller: One or more allowed values are equalities/inequalities, but the subroutine".
+							" cant distinguish the operand from the number. Check formatting of the input.\n";
+							}
+						} # foreach element in value options (check if value satisfies equality) ends
+					
+					} # If there are equalities among the allowed values ends
+				else
+					{
+					if($argument == 0)	{	$argument = "zero";	}
+					unless(listTools::value_in_array($argument, $value_options_ref, "num"))	{	$message = "The argument has value $argument, but the allowed values are (@value_options)";	}
+					}
+				} # elseif argument is numeric ends
+			} # if value options have been specified ends
+		} # else (if) type is ok ends
+	
+	return($message);
+	} # end check_arg
+
+
 return(1);
 
 # end functions
