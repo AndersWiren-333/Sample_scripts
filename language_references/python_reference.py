@@ -1,10 +1,10 @@
-#####     PYTHON LANGUAGE QUICK REFERENCE     #####
+#####     PYTHON QUICK REFERENCE     #####
 
 # Help
 # Packages and requiring them
 # Scalars
-# Arithmetic
 # Arrays
+# Arithmetic
 # Matrices
 # Plots
 # Loops
@@ -39,34 +39,7 @@ import packagename
 string_var = "Ale stenar"
 num_var = 56
 
-### ARITHMETIC ###
-2+1			# 3
-3-2			# 1
-2*4			# 8
-8/2			# 4
-2**4 		# 16
-3//2		# 1 (get only the integer part of the quotient)
-
-# Get length of a string
-len(stringname)
-
-# Concatenating strings
-newstring = string1+string2			"Ale stenarAle stenar"
-string3 = string1 * 3				"Ale stenarAle stenarAle stenar"
-
-# Indexing a string
-string_var[4:5]		# "s"
-string_var[:5]		# "Ale s"
-string_var[4:]		# "stenar"
-string_var[-1]		# "r"
-string_var[2:-1]	# "e stena"
-string_var[0:10:2]		# Get every other character in the string, "Aesea"
-string_var[0:len(string_var):2]		# Same as above
-string_var[::2]						# Same as above	
-
 # Splitting a string into an array
-
-
 
 ### ARRAYS ###
 
@@ -111,6 +84,33 @@ if "A" in "Alfabetet"				# If "A" is present in the string "Alfabetet", do somet
 sorted(arrayname)		# Works on both numeric and character arrays
 
 
+### ARITHMETIC ###
+2+1			# 3
+3-2			# 1
+2*4			# 8
+8/2			# 4
+2**4 		# 16
+3//2		# 1 (get only the integer part of the quotient)
+
+# Get length of a string
+len(stringname)
+
+# Concatenating strings
+newstring = string1+string2			"Ale stenarAle stenar"
+string3 = string1 * 3				"Ale stenarAle stenarAle stenar"
+
+# Indexing a string
+string_var[4:5]		# "s"
+string_var[:5]		# "Ale s"
+string_var[4:]		# "stenar"
+string_var[-1]		# "r"
+string_var[2:-1]	# "e stena"
+string_var[0:10:2]		# Get every other character in the string, "Aesea"
+string_var[0:len(string_var):2]		# Same as above
+string_var[::2]						# Same as above	
+
+
+-
 ### MATRICES ###
 
 # In python, matrices are called 2-dimensional arrays
