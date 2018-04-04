@@ -2,7 +2,9 @@ package normalise;
 
 # length_normalise_matrix($file_or_var, $filename_or_matrixref, $length_col, $header_y_n, $sample_col1, $sample_col2 ...)
 # quantile_normalise_matrix($file_or_var, $filename_or_matrixref, $header_y_n, $tied_ranks_y_n, $preserve_zeros_y_n, $sample_col1, $sample_col2 ...)
-# resampling_check()
+# resampling_check($to_number, $in_steps_of, $align_to_this_genome_fasta, $with_n_mismatches, $fasta_file1, $fasta_file2 ...)
+# qpcr_norm_rnaseq()
+# best_keeper_index()
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -234,7 +236,7 @@ sub quantile_normalise_matrix
 			
 			my $new_value = "Valnot";
 			
-			# If the rank in @orig_rank_matrix isn't present in @search_ranks, get the two closest ranks
+			# If the rank in @orig_rank_matrix isn't present in @search_ranks, get the two closest ranks and assign the mean of them
 			if($search_rank_index eq "not_available")
 				{
 				my ($index1, $index2)=listTools::get_closest_indices(\@search_ranks, $current_rank);
@@ -409,6 +411,233 @@ sub resampling_check
 	} # end resampling_check
 
 
+sub qpcr_norm_rnaseq
+	{
+	# This function takes a gene expression matrix (either as a matrix reference – set $file_or_var to ‘var’ - or as a csv file –
+	# set $file_or_var to ‘file’) and performs qpcr style normalisation on it. When running the function, specify whether the
+	# matrix has a header ($header_y_n = "y", otherwise "n") and the column numbers holding the data to be normalised (i.e. those
+	# not containing annotation information. First column is called 1 (i.e. not native perl indexing)). Make sure the column numbers
+	# are the last arguments to be specified. 
+	
+	# The normalisation is based on the principle of qRT-PCR normalisation using stably expressed reference genes, with the difference
+	# that in qRT-PCR we assume a history of exponential accumulation of the PCR product and we can estimate the efficiency of the PCR
+	# primers/reaction. Since this function is meant to be applied to RNAseq data, and we don't know the efficiency of the sequencing of specific
+	# transcripts, we don't assume exponential accumulation. Rather we take the mean expression (specify arithmetic ('mean') or geometric
+	# ('geomean') mean in the function call) within each sample/library as a normalisation factor within that library. This means that all read
+	# counts within a sample/library are divided by that sample's normalisation factor, and this constitutes the normalised read count. In the function call,
+	# also specify a textfile listing the names of the reference genes and  the column number in the input matrix holding the gene/transcript names
+	
+	# The returned matrix contains all original headers and annotation information (if any). If the input matrix was read from a file, the
+	# normalised matrix will be written to an output csv file (as well as returned as a matrix).
+	
+	# Set error messages and accept input parameters
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line})".
+	"Correct usage: '${subname}(\$file_or_var, \$filename_or_matrixref, \$header_y_n, \$ref_genes_file.txt, \$meantype, \$gene_names_col, \$sample_col1, \$sample_col2 ...)'\n\nwhere".
+	"\t\$file_or_var should be set to 'var' if the input is a reference to a matrix, or 'file' if the input is a csv file (and the output also should be)\n".
+	"\t\$filename_or_matrixref is either the name of the input csv file or a reference to the matrix to be normalised\n".
+	"\t\$header_y_n - set this to 'y' if the input file/matrix has a header or 'n' if it doesn't\n".
+	"\t\$meantype is the type of mean value to be computed for the expression of the reference genes. Available optione are 'mean' (arithmetic mean) and 'geomean' (geometric mean)\n".
+	"\t\$gene_names_col is the column number in the matrix holding gene names (numbering starts at 1)\n".
+	"\t\$sample_col1, \$sample_col2 etc are the column numbers holding the data to be normalised (first column is 1, second is 2 etc. i.e. not native perl indexing)\n\n";
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $file_or_var = shift @pars or die $usage;
+	my $matrix_file_or_ref = shift @pars or die $usage;      # NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to proble$
+	my $header_y_n = shift @pars or die $usage;
+	my $ref_file = shift @pars or die $usage;
+	my $meantype = shift @pars or die $usage;
+	my $gene_names_col = shift @pars or die $usage;
+	$gene_names_col--;
+	my @raw_sample_cols = @pars;
+	my @sample_cols=misc::shift_input_cols(\@raw_sample_cols);		# Translate column numbers to perl native indexing (where column 1 is column 0)
+
+	print "\n\nReading matrix...  ";
+	# Read/dereference the matrix
+	my @matrix=();
+	if($file_or_var eq "file")	{	@matrix=fileTools::read_table($matrix_file_or_ref, "csv");	}
+	elsif($file_or_var eq "var")	{	@matrix = @{$matrix_file_or_ref};	}
+	else	{	die "\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Parameter \$file_or_var must be either 'file' or 'var'\n\n";	}
+	
+	# If there is a header, remove it from the matrix and store it in an array
+	my @header=();
+	if($header_y_n eq "y")
+		{
+		my $headerref = shift(@matrix);
+		@header = @{$headerref};
+		}
+	print "Finished!\n";
+	
+	# Read reference gene names from file
+	my @refgenes=misc::read_list($ref_file);
+	my @ref_expr_matrix=();
+	my $start=$sample_cols[0];
+	my $stop=$sample_cols[$#sample_cols];
+	
+	# Loop over matrix rows and get expression series for reference genes
+	for(my $c=0; $c<=$#matrix; $c++)
+		{
+		my $gene_name = $matrix[$c][$gene_names_col];
+		
+		# Loop over reference genes
+		for(my $d=0; $d<=$#refgenes; $d++)
+			{
+			my $refname = $refgenes[$d];
+			if($gene_name eq $refname)
+				{
+				# Get expression series
+				my @arr = @{$matrix[$c]};
+				my @ref_expr_series = @arr[$start..$stop];
+				push(@ref_expr_matrix, [(@ref_expr_series)]);
+				}
+			}
+		}
+	
+	# Take the average expression value of reference genes (within each sample) and use as a normalisation factor
+	# within that sample.
+	my @avg_ref_expressions=matrixTools::apply(\@ref_expr_matrix, "col", $meantype);
+
+	# Add $start number of elements to the start of @avg_ref_expressions, to synchronize it's indices with those of the matrix rows
+	for(my $g=1; $g<=$start; $g++)	{	unshift(@avg_ref_expressions, 0);	}
+	
+	# Loop over matrix rows and normalise expression values
+	for(my $e=0; $e<=$#matrix; $e++)
+		{
+		# Loop over columns in row and normalise
+		for(my $f=$start; $f<=$stop; $f++)
+			{
+			if($avg_ref_expressions[$f] == 0)	{	die "A reference gene has a zero expression value at row $e, column $f, and therefore can't be used for normalisation\n";	}
+			my $norm_value = ($matrix[$e][$f]/$avg_ref_expressions[$f]);
+			$matrix[$e][$f] = $norm_value;
+			}
+		}
+	
+	# If the matrix had a header at the outset, add it back again
+	if($header_y_n eq "y")	{	unshift(@matrix, \@header);	print "Put header back onto matrix\n";	}
+	
+	print "Writing normalised matrix to outfile...  ";
+	# If the matrix was read from an infile, print it to a new outfile
+	if($file_or_var eq "file")	{	fileTools::write_table(\@matrix, "csv", "qpcr_norm_${matrix_file_or_ref}", "lin");	}
+	print "Finished!\n\n";
+	print "\tAll done!\n\n";
+	
+	return(@matrix);
+	} # qpcr_norm_rnaseq	
+	
+	
+sub best_keeper_index
+	{
+	# Computes an expression index (arithmetic or geometric mean of expression) for a set of reference genes in an RNAseq gene
+	# expression dataset, similarly (but not identical) to that of Pfaffl et al (2001). An index is computed for each sample/library
+	# in the dataset. This index is meant to be used as a normalisation factor for the data from the respective library/sample.
+	# Before computing the index the function checks the standard deviation and normality of each reference gene. After computation,
+	# each gene in the index is correlated to each other gene and to the index itself (using pearson correlation if all genes are
+	# normally distributed or spearman if not). The indices are returned as an array.
+
+	# Usage: subname($dataset_name_or_reference, $header_y_n, $gene_names_col, $sample_cols_reference, $refgenelist_or_reference)
+
+	# Input parameters:
+
+	# datafile_or_matrixref		= 	Name of a csv file holding the data or a reference to a matrix holding the data
+	# header_y_n				= 	'y' if the dataset has a header or 'n' if it doesn't
+	# gene_names_col			= 	Column number in dataset holding gene names (first column is called 1)
+	# sample_cols_listref 		= 	A reference to an array holding the column numbers of the relevant data columns (=those the index should be based on)
+	# 								This can also be specified directly in the function call as a list enclosed in square brackets (e.g. [1,2,3,4])
+	# refgenefile_or_listref	=	Either the name of a text file listing the names of reference genes, or a reference to an array holding the
+	# 								names.
+	# meantype					=	'mean' if arithmetic mean should be used or 'geomean' if geometric mean should be used
+	# corrtype					=	'pearson' if all genes are normally distributed or 'spearman' if not
+
+=pod	
+	
+	# Set usage message
+	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
+	my $sub_and_caller = "subroutine '${subname}' (called by script '${calling_script}', line ${calling_line})";
+	my $usage="\nUsage error for $sub_and_caller\n".
+	"Correct usage: '${subname}(\$dataset_name_or_reference, \$header_y_n, \$gene_names_col, \$sample_cols_reference, \$refgenelist_or_reference)'\n\nwhere".
+	"\tdatafile_or_matrixref\t=\tName of a csv file holding the data or a reference to a matrix holding the data\n".
+	"\theader_y_nt=\t'y' if the dataset has a header or 'n' if it doesn't\n".
+	"\tgene_names_col\t=\tColumn number in dataset holding gene names (first column is called 1)\n".
+	"\tsample_cols_listref\t=\tA reference to an array holding the column numbers of the relevant data columns (=those the index should be based on)\n".
+	"\t\t\tThis can also be specified directly in the function call as a list enclosed in square brackets (e.g. [1,2,3,4])\n".
+	"\trefgenefile_or_listref\t=\tEither the name of a text file listing the names of reference genes, or a reference to an array holding the names.\n".
+	"\tmeantype\t=\t'mean' if arithmetic mean should be used or 'geomean' if geometric mean should be used\n".
+	"\tcorrtype\t=\t'pearson' if all genes are normally distributed or 'spearman' if not\n\n";
+	
+	# Read input parameters
+	my @pars = @_ or die $usage;
+	foreach my $el (@pars)  {       $el = text::trim($el);  }
+	my $datafile_or_matrixref = shift @pars or die $usage;
+	my $header_y_n = shift @pars or die $usage;
+	my $gene_names_col = shift @pars or die $usage;
+	my $sample_cols_listref = shift @pars or die $usage;
+	my $refgenefile_or_listref = shift @pars or die $usage;
+	my $meantype = shift @pars or die $usage;
+	my $corrtype = shift @pars or die $usage;
+
+	# Validate and process parameters
+	my @matrix;
+	if(ref($datafile_or_matrixref) eq "ARRAY")	{	@matrix = @{$datafile_or_matrixref};	}
+	else	{	@matrix=fileTools::read_table($datafile_or_matrixref, "csv") or die "$sub_and_caller couldn't open file $datafile_or_matrixref\n";	}
+	
+	unless(listTools::value_in_array($header_y_n, ["y","n"], "char"))	{	die "$sub_and_caller:\t Argument header_y_n must be either 'y' or 'n'\n";	}
+	unless($gene_names_col > 0)	{	die "$sub_and_caller:\tArgument gene_names_col must be a number larger than 0\n";	}
+	$gene_names_col--;
+	
+	my @sample_cols;
+	if(ref($sample_cols_listref) eq "ARRAY")	{	@sample_cols = @{$sample_cols_listref};	}
+	else	{	die "$sub_and_caller: Argument sample_cols_listref must be an array reference\n";	}
+	@sample_cols=misc::shift_input_cols(\@raw_sample_cols);		# Translate column numbers to perl native indexing (where column 1 is column 0)
+
+	my @refgenes;
+	if(ref($refgenefile_or_listref) eq "ARRAY")	{	@refgenes = @{$refgenefile_or_listref};	}
+	else	{	print "Something";	}
+	
+	
+	print "\n\nReading matrix...  ";
+	# Read/dereference the matrix
+	my @matrix=();
+	if($file_or_var eq "file")	{	@matrix=fileTools::read_table($matrix_file_or_ref, "csv");	}
+	elsif($file_or_var eq "var")	{	@matrix = @{$matrix_file_or_ref};	}
+	else	{	die "\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Parameter \$file_or_var must be either 'file' or 'var'\n\n";	}
+	
+	# If there is a header, remove it from the matrix and store it in an array
+	my @header=();
+	if($header_y_n eq "y")
+		{
+		my $headerref = shift(@matrix);
+		@header = @{$headerref};
+		}
+	print "Finished!\n";
+	
+	# Read reference gene names from file
+	my @refgenes=misc::read_list($ref_file);
+	my @ref_expr_matrix=();
+	my $start=$sample_cols[0];
+	my $stop=$sample_cols[$#sample_cols];
+	
+	# Loop over matrix rows and get expression series for reference genes
+	for(my $c=0; $c<=$#matrix; $c++)
+		{
+		my $gene_name = $matrix[$c][$gene_names_col];
+		
+		# Loop over reference genes
+		for(my $d=0; $d<=$#refgenes; $d++)
+			{
+			my $refname = $refgenes[$d];
+			if($gene_name eq $refname)
+				{
+				# Get expression series
+				my @arr = @{$matrix[$c]};
+				my @ref_expr_series = @arr[$start..$stop];
+				push(@ref_expr_matrix, [(@ref_expr_series)]);
+				}
+			}
+		}
+=cut
+	} # end best_keeper_index
+	
+	
 return(1);
 
 # end functions
