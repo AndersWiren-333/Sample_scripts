@@ -18,7 +18,8 @@ package stats;
 # three_point_expr_pattern()
 # assign_ranks($array_ref, $num_or_char)
 # covariance($array_ref1, $array_ref2)
-# corr_coeff($array_ref1, $array_ref2)
+# corr_coeff($array_ref1, $array_ref2, $samp_or_pop)
+# pearson_corr($array_ref1, $array_ref2, $samp_or_pop)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -1075,6 +1076,7 @@ sub corr_coeff
 	return($corr_coeff);
 	} # end corr_coeff
 	
+
 sub pearson_corr
 	{
 	# Computes the Pearson Product Moment Correlation Coefficient between two sets of numbers (specified as array references). The two sets must have
@@ -1109,13 +1111,12 @@ sub pearson_corr
 	my $covariance=stats::covariance($arref1, $arref2, $samp_or_pop);
 	
 	$corr_coeff = $covariance/$denominator;
-	
-	print "\n\t$corr_coeff\n";
 			
 	return($corr_coeff);
 	} # end pearson_corr
+	
 
-
+	
 return(1);
 
 # end functions
