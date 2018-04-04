@@ -879,7 +879,8 @@ sub shift_input_cols
 
 sub type
 	{
-	# Checks id a value is a number or a text string
+	# Checks if a scalar value is a number or a text string. If it is a string, checks if it is a reference to an array, matrix or hash.
+	# Returns "char", "num", "arrayref", "matrixref" or "hashref". 
 	
 	# Set error messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
@@ -893,10 +894,29 @@ sub type
 	my $value = shift @pars or 0;
 
 	# Processing
+
+	# If the value is a number...
 	my $dec=`perl -MPOSIX=locale_h -e "print localeconv()->{decimal_point}`;	# Get the decimal separator for the current system
 	my $type="";
-	if($value =~ /^[1234567890\-\"$dec"]+$/)	{	$type = "num";	}
-	else	{	$type = "char";	}
+	if($value =~ /^[+-]?[1234567890]+[$dec]?[1234567890]*e?[+-]?[1234567890]*$/)
+		{
+		if((2*$value)/2 == $value)	{	$type = "num";	}
+		}
+	#if($value =~ /^[+-]?[1234567890]+[$dec]?[1234567890]*$/)	{	$type = "num";	}
+	
+	# If it is a string... it may be a reference to a data structure
+	else
+		{
+		if(ref($value) eq "ARRAY")
+			{
+			my @arr = @{$value};
+			my $first_element = $arr[0];
+			if(ref($first_element) eq "ARRAY")	{	$type = "matrixref";	}
+			else	{	$type = "arrayref";	}
+			}
+		elsif(ref($value) eq "HASH")	{	$type = "hashref";	}
+		else	{	$type = "char";	}
+		}
 	
 	return($type);
 	} # end type
