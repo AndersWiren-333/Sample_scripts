@@ -2,6 +2,9 @@ package listTools;
 
 # array_equality($arrayref1, $arrayref2)
 # get_closest_values($value)
+# get_array_value_index($array_reference, $num_or_char, $value)
+# get_closest_indices($array_ref, $value)
+# value_in_array($value, $array_ref, $num_or_char)
 # end sub list
 
 ########################################################## Universal perl module header ##########################################################
@@ -34,8 +37,8 @@ my $maintain = $scripts;
 $maintain =~ s/scripts/maintainance/;
 
 # If this script/module is intended to be used outside the folder structure of the parent repository (e.g. a wrapper script to be started from
-# another part of your system), set the absolute path to repository scripts and modules (that this cript may depend on) here (and comment out
-# the lines for seeting paths above). Otherwise, keep the lines below commented out.
+# another part of your system), set the absolute path to repository scripts and modules (that this script may depend on) here (and comment out
+# the lines for setting paths above). Otherwise, keep the lines below commented out.
 #my $modules = "path/to/modules/folder";
 #my $scripts = "path/to/scripts/folder";
 
@@ -297,13 +300,14 @@ sub value_in_array
 	# Accept input parameters
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
-	my $value = shift @pars or die $usage;	# NB! This will not work if the argument is the number 0 (because it will then be interpreted as false). In that case you need to use 'shift(@pars) or 0', but it may lead to problems....
+	my $value = shift @pars or die $usage;
 	my $arref = shift @pars or die $usage;
 	my $num_or_char = shift @pars or die $usage;
 
 	my @arr = @{$arref};
 	
 	# Loop over elements in @arr and check if they corresponds to $value
+	if($value eq "zero")	{	$value=0;	}
 	my $tf = '';
 
 	LINES: for(my $c=0; $c<=$#arr; $c++)
@@ -315,6 +319,7 @@ sub value_in_array
 	return($tf);
 	} # end value_in_array	
 
+	
 return(1);
 
 # end functions
