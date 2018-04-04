@@ -533,10 +533,11 @@ sub get_seqs_from_fasta
 	# Loop over selected IDs
 	IDS: for(my $cc=0; $cc<=$#ids; $cc++)
 		{
+		my $fasta_id = ">$ids[$cc]";
 		# Loop over sequences in @matrix
 		for(my $dd=0; $dd<=$#matrix; $dd++)
 			{
-			if($ids[$cc] eq $matrix[$dd][0])
+			if($fasta_id eq $matrix[$dd][0])
 				{
 				my $new_id = ">"."$ids[$cc]";
 				push(@sel_matrix, [($new_id, $matrix[$dd][1])]);
