@@ -74,8 +74,6 @@ my $rscript = "Rscript";
 
 ########################################################## Functions ##########################################################
 
-# Elizabeth II Regina
-
 sub fasta_to_matrix
 	{
 	# Reads a fasta file into a matrix
