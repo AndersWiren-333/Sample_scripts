@@ -70,19 +70,27 @@ sub sub_1
 	{
 	# Description of what the function does and how to use it
 	
-	# Set error messages
+	# Set usage messages
 	my ($calling_script, $calling_line, $subname) = (caller(0))[1,2,3];
-	my $usage="\nUsage error for subroutine '${subname}' (called by script '${calling_script}', line ${calling_line}). Correct usage: '${subname}(\$argument1, \$argument2, \@arguments3)'\n\nwhere".
+	my $sub_and_caller = "subroutine '${subname}' (called by script '${calling_script}', line ${calling_line})";
+	my $usage1 = "Usage error for $sub_and_caller";
+	
+	my $usage2="\nCorrect usage: '${subname}(\$argument1, \$argument2, \@arguments3)'\n\nwhere".
 	"\t\$argument1 can be either 'X' or 'Y'\n".
 	"\t\$argument2 is a file in XX format\n".
 	"\t\@arguments3 is a list of arguments\n\n";
 	
-	# Accept input parameters
+	my $usage3 = "$usage1\n$usage2\n";
+	
+	# Read input parameters from command line/function call
 	my @pars = @_ or die $usage;
 	foreach my $el (@pars)  {       $el = text::trim($el);  }
 	my $argument1 = shift @pars or die $usage;	
 	my @other_arguments = @pars or die $usage;
 
+	# Validate input parameters
+	my $error_message1=envir::check_arg($argument1, ["char", "num", "arrayref", "matrixref", "hashref"], ["allowed_value1", "allowed_value2"]); if($error_message1)	{	die "${usage1}: $error_message1\n";	}
+	
 	# Processing
 	open(my $in, "<", $infile) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't open infile $infile\n";
 	open(my $out, ">", $outname) or die "Subroutine $subname (called by script '${calling_script}', line ${calling_line}) couldn't create outfile $outname\n";
